@@ -1,0 +1,399 @@
+================================================================================
+                         PROJECT SYNOPSIS
+================================================================================
+
+Project Title : Node.js Electron-Based Agentic Harness
+Domain        : Artificial Intelligence / Autonomous Agents / Desktop Automation
+Platform      : Cross-Platform Desktop (Windows, macOS, Linux)
+Technology    : Node.js, Electron, JavaScript/TypeScript, Python (optional backend)
+Type          : Desktop Application with Agentic AI Capabilities
+
+================================================================================
+1. INTRODUCTION
+================================================================================
+
+The Node.js Electron-Based Agentic Harness is a desktop application framework
+designed to build, deploy, and manage autonomous AI agents locally on a user's
+machine. Unlike cloud-only AI tools, this harness runs agent workflows directly
+on the desktop, giving users full control over data privacy, tool access, and
+execution environment.
+
+The application combines Electron's cross-platform desktop capabilities with
+Node.js's backend strength to create a secure, extensible environment where
+language-model-driven agents can plan, reason, use tools, and execute
+multi-step tasks autonomously or under human supervision.
+
+================================================================================
+2. PROBLEM STATEMENT
+================================================================================
+
+Existing AI agent platforms are predominantly cloud-based, which raises concerns
+about:
+- Data privacy and sensitive information leakage to third-party servers
+- Vendor lock-in and recurring subscription costs
+- Limited access to local system tools (file system, shell, local APIs)
+- No native desktop GUI for agent monitoring and control
+- Dependency on constant internet connectivity
+
+There is a need for a local-first, desktop-native agentic harness that enables
+users to run autonomous agents on their own hardware with full transparency
+and local tool integration.
+
+================================================================================
+3. OBJECTIVES
+================================================================================
+
+1. Develop a cross-platform desktop application using Electron and Node.js.
+2. Provide a local runtime for LLM-powered autonomous agents.
+3. Enable secure tool use (file system, shell, browser, local APIs) with
+   permission-based access control.
+4. Support multi-agent orchestration and human-in-the-loop workflows.
+5. Offer a graphical interface for agent configuration, monitoring, and logs.
+6. Ensure security through Electron sandboxing, context isolation, and IPC
+   validation.
+7. Allow extensibility via plugins, custom tools, and agent templates.
+
+================================================================================
+4. SCOPE
+================================================================================
+
+In-Scope:
+- Electron main process and renderer process architecture
+- Preload script for secure IPC bridge
+- Agent execution engine (goal decomposition, planning, reflection)
+- LLM provider integration (OpenAI, Anthropic, local models via Ollama, etc.)
+- Local tool registry (read/write files, run commands, HTTP requests, etc.)
+- Memory system (short-term context, long-term vector storage)
+- GUI dashboard for agent management and live logs
+- Configuration via .env and JSON files
+- Dev and production build scripts with auto-updater support
+
+Out-of-Scope:
+- Cloud-hosted agent execution (primary focus is local)
+- Mobile application clients
+- Training of custom foundation models
+- Enterprise SSO/Active Directory integration (future phase)
+
+================================================================================
+5. PROPOSED SYSTEM / SOLUTION
+================================================================================
+
+The Agentic Harness follows a layered architecture:
+
+LAYER 1: Presentation (Renderer Process)
+- React/Vue or plain HTML/CSS/JS UI inside Electron BrowserWindow
+- Agent chat interface, tool permission dialogs, settings panel, log viewer
+
+LAYER 2: IPC Bridge (Preload Script)
+- ContextBridge exposes only safe APIs to renderer
+- Validates and forwards requests between renderer and main process
+
+LAYER 3: Application Control (Main Process)
+- Window management, tray icon, auto-updater, single-instance lock
+- IPC handlers for agent lifecycle, file dialogs, system commands
+
+LAYER 4: Agent Engine (Node.js Backend)
+- Goal parser and planner
+- Tool executor with sandboxing
+- LLM client with streaming support
+- Memory manager (vector + conversation history)
+- Agent scheduler and supervisor
+
+LAYER 5: Tool & Model Providers
+- Pluggable LLM providers (REST APIs or local inference)
+- Pluggable tools with risk classification (safe, confirm, dangerous)
+
+================================================================================
+6. SYSTEM ARCHITECTURE
+================================================================================
+
+[Renderer Process] <--> [Preload Script] <--> [Main Process] <--> [Agent Engine]
+         UI                 IPC Bridge          App Control         LLM + Tools
+                                                        (Electron)       (Node.js)
+
+Key Components:
+- main.js: Electron app entry, window creation, IPC handlers
+- preload.js: Secure contextBridge API exposure
+- renderer/: Frontend UI code
+- agents/: Agent definitions, prompts, and workflows
+- tools/: Tool implementations (fs, shell, http, etc.)
+- memory/: Vector store and conversation memory
+- config/: .env, config.json, agents.json
+- scripts/: Build, dev, and production scripts
+
+================================================================================
+7. TECHNOLOGY STACK
+================================================================================
+
+Core Framework:
+- Electron (v25+) - Cross-platform desktop shell
+- Node.js (v18+ LTS) - Backend runtime
+- JavaScript / TypeScript - Application logic
+
+Agentic / AI Layer:
+- LLM Providers: OpenAI API, Anthropic Claude, Ollama (local), Azure OpenAI
+- Embeddings: sentence-transformers, OpenAI embeddings
+- Vector Store: ChromaDB, SQLite-vec, or local JSON-based memory
+- Orchestration: Custom planner (ReAct / Plan-and-Execute pattern)
+
+UI:
+- HTML5, CSS3, Vanilla JS or React/Vue (renderer)
+- Electron BrowserWindow with preload script
+
+DevOps / Tooling:
+- npm / yarn - Package management
+- electron-builder - Packaging and installers
+- ESLint, Prettier - Code quality
+- Jest / Playwright - Testing
+- Git - Version control
+
+================================================================================
+8. KEY FEATURES
+================================================================================
+
+1. Autonomous Agent Execution
+   - Accept natural language goals
+   - Decompose goals into sub-tasks
+   - Execute iteratively until goal is met or max steps reached
+
+2. Human-in-the-Loop
+   - Approve/reject tool calls before execution
+   - Pause/resume agent runs
+   - Manual override at any step
+
+3. Local Tool Use
+   - File system read/write/search
+   - Shell command execution (allowlist/denylist)
+   - HTTP API requests
+   - Local application control (via Electron)
+
+4. Memory System
+   - Short-term conversation memory
+   - Long-term vector memory for retrieval-augmented generation (RAG)
+
+5. Multi-Provider LLM Support
+   - Switch between cloud and local models
+   - API key management via .env
+
+6. Desktop Integration
+   - System tray icon
+   - Auto-updater
+   - Single instance enforcement
+   - Native notifications
+
+7. Security
+   - contextIsolation enabled
+   - nodeIntegration disabled in renderer
+   - enableRemoteModule disabled
+   - IPC input validation and sanitization
+
+================================================================================
+9. HARDWARE REQUIREMENTS
+================================================================================
+
+Minimum:
+- Processor: Intel Core i3 / AMD Ryzen 3 or equivalent (2 cores)
+- RAM: 4 GB
+- Storage: 2 GB free space
+- Display: 1280 x 720 resolution
+- Network: Broadband for LLM API access (optional if using local models)
+
+Recommended:
+- Processor: Intel Core i5 / AMD Ryzen 5 or better (4+ cores)
+- RAM: 8 GB or more
+- Storage: 5 GB free space (SSD recommended)
+- Display: 1920 x 1080 or higher
+- Network: Stable broadband for cloud LLM providers
+
+================================================================================
+10. SOFTWARE REQUIREMENTS
+================================================================================
+
+Operating Systems:
+- Windows 10/11 (64-bit)
+- macOS 10.15+ (Intel or Apple Silicon)
+- Linux (Ubuntu 20.04+, Debian, Fedora)
+
+Required Software:
+- Node.js LTS (v18 or v20)
+- npm (bundled with Node.js) or Yarn
+- Git
+- Code Editor: VS Code (recommended)
+
+Optional:
+- Python 3.10+ (if using Python-based ML tools or Ollama)
+- Docker (for containerized local model deployment)
+- Ollama (for running local LLMs offline)
+
+================================================================================
+11. METHODOLOGY
+================================================================================
+
+Phase 1: Requirements Analysis & Planning
+- Define agent capabilities, tool set, and security boundaries
+- Select LLM providers and vector database
+
+Phase 2: Core Development
+- Set up Electron boilerplate with main/renderer/preload
+- Implement IPC contract and secure contextBridge
+- Build agent execution engine (planner + tool executor)
+
+Phase 3: AI Integration
+- Connect LLM clients (OpenAI, Anthropic, Ollama)
+- Implement memory and RAG pipeline
+- Add prompt templates and agent configurations
+
+Phase 4: UI Development
+- Build renderer interface (chat, settings, logs)
+- Connect UI to main process via IPC
+
+Phase 5: Testing & Security Hardening
+- Unit tests for agent logic and tools
+- Integration tests for IPC and Electron APIs
+- Security audit of preload script and IPC handlers
+
+Phase 6: Packaging & Deployment
+- Configure electron-builder for Windows/macOS/Linux
+- Code signing and auto-updater setup
+- Create installer packages (.exe, .dmg, .AppImage)
+
+================================================================================
+12. PROJECT STRUCTURE
+================================================================================
+
+agentic-harness/
+├── node_modules/
+├── public/
+├── src/
+│   ├── main/
+│   │   ├── main.js
+│   │   ├── preload.js
+│   │   └── ipcHandlers.js
+│   ├── renderer/
+│   │   ├── index.html
+│   │   ├── style.css
+│   │   └── app.js
+│   ├── agents/
+│   │   ├── baseAgent.js
+│   │   └── agents.json
+│   ├── tools/
+│   │   ├── fsTool.js
+│   │   ├── shellTool.js
+│   │   └── httpTool.js
+│   ├── memory/
+│   │   └── memoryStore.js
+│   └── config/
+│       ├── config.json
+│       └── .env.example
+├── scripts/
+│   ├── dev.js
+│   └── build.js
+├── package.json
+├── electron-builder.json
+├── README.md
+└── synopsis.txt
+
+================================================================================
+13. INSTALLATION & SETUP
+================================================================================
+
+1. Clone the repository:
+   git clone <repository-url>
+   cd agentic-harness
+
+2. Install dependencies:
+   npm install
+
+3. Configure environment:
+   cp config/.env.example config/.env
+   # Edit .env and add your LLM API keys or set OLLAMA_BASE_URL
+
+4. Run in development:
+   npm run dev
+
+5. Build for production:
+   npm run build
+
+6. Run installed app:
+   - Windows: dist/win-unpacked/AgenticHarness.exe
+   - macOS: dist/mac/AgenticHarness.app
+   - Linux: dist/linux-unpacked/agentic-harness
+
+================================================================================
+14. CONFIGURATION FILES
+================================================================================
+
+.env:
+  LLM_PROVIDER=openai
+  OPENAI_API_KEY=sk-...
+  OLLAMA_BASE_URL=http://localhost:11434
+  MAX_AGENT_STEPS=10
+  ENABLE_SHELL_TOOL=true
+  LOG_LEVEL=debug
+
+config.json:
+  {
+    "appName": "Agentic Harness",
+    "window": { "width": 1200, "height": 800 },
+    "defaultModel": "gpt-4",
+    "memory": { "provider": "local", "path": "./data/memory" }
+  }
+
+agents.json:
+  {
+    "agents": [
+      {
+        "id": "research-assistant",
+        "name": "Research Assistant",
+        "systemPrompt": "You are a helpful research agent...",
+        "tools": ["webSearch", "readFile", "writeFile"],
+        "humanInTheLoop": true
+      }
+    ]
+  }
+
+================================================================================
+15. SECURITY REQUIREMENTS
+================================================================================
+
+1. contextIsolation: true (renderer cannot access Node.js APIs directly)
+2. nodeIntegration: false in renderer process
+3. enableRemoteModule: false (deprecated remote module disabled)
+4. Preload script exposes only whitelisted IPC channels via contextBridge
+5. All IPC messages validated and sanitized in main process
+6. Shell command execution restricted to allowlisted commands
+7. File system access limited to user-selected directories
+
+================================================================================
+16. TESTING
+================================================================================
+
+- Unit Testing: Jest for agent logic, tools, and memory modules
+- Integration Testing: Spectron or Playwright for Electron + renderer flows
+- Linting: ESLint with Prettier formatting
+- Type Checking: TypeScript (if used) via tsc --noEmit
+
+================================================================================
+17. FUTURE SCOPE
+================================================================================
+
+- Multi-agent collaboration (agent swarms)
+- Visual workflow builder (drag-and-drop agent graphs)
+- Plugin marketplace for community tools
+- Local model fine-tuning integration
+- Enterprise features: role-based access control, audit logs
+- Mobile companion app for remote agent monitoring
+
+================================================================================
+18. CONCLUSION
+================================================================================
+
+The Node.js Electron-Based Agentic Harness provides a secure, local-first,
+desktop-native platform for running autonomous AI agents. By combining Electron's
+desktop capabilities with Node.js's extensibility and modern LLM technology, it
+empowers users to automate complex tasks while maintaining full control over
+their data, tools, and execution environment.
+
+================================================================================
+                         END OF SYNOPSIS
+================================================================================
