@@ -5,7 +5,7 @@
 Project Title : Node.js Electron-Based Agentic Harness
 Domain        : Artificial Intelligence / Autonomous Agents / Desktop Automation
 Platform      : Cross-Platform Desktop (Windows, macOS, Linux)
-Technology    : Node.js, Electron, JavaScript/TypeScript, Python (optional backend)
+Technology    : Node.js, Electron, JavaScript/TypeScript
 Type          : Desktop Application with Agentic AI Capabilities
 
 ================================================================================
@@ -132,12 +132,12 @@ Core Framework:
 
 Agentic / AI Layer:
 - LLM Providers: OpenAI API, Anthropic Claude, Ollama (local), Azure OpenAI
-- Embeddings: sentence-transformers, OpenAI embeddings
-- Vector Store: ChromaDB, SQLite-vec, or local JSON-based memory
+- Embeddings: OpenAI embeddings, local embedding models (via Ollama or Node.js libraries)
+- Vector Store: SQLite-vec
 - Orchestration: Custom planner (ReAct / Plan-and-Execute pattern)
 
 UI:
-- HTML5, CSS3, Vanilla JS or React/Vue (renderer)
+- HTML5, CSS3, Vanilla JS or React/Vite (renderer)
 - Electron BrowserWindow with preload script
 
 DevOps / Tooling:
@@ -221,9 +221,8 @@ Required Software:
 - Code Editor: VS Code (recommended)
 
 Optional:
-- Python 3.10+ (if using Python-based ML tools or Ollama)
-- Docker (for containerized local model deployment)
 - Ollama (for running local LLMs offline)
+- Docker (for containerized local model deployment)
 
 ================================================================================
 11. METHODOLOGY

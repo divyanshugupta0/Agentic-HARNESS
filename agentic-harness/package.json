@@ -1,0 +1,27 @@
+{
+  "name": "agentic-harness",
+  "version": "1.0.0",
+  "description": "Node.js Electron-Based Agentic Harness",
+  "main": "src/main/main.js",
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "build": "node scripts/build.js",
+    "package": "electron-builder"
+  },
+  "dependencies": {
+    "electron": "^25.0.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.agentic.harness",
+    "productName": "AgenticHarness",
+    "directories": {
+      "output": "dist"
+    },
+    "win": { "target": "nsis" },
+    "mac": { "target": "dmg" },
+    "linux": { "target": "AppImage" }
+  }
+}
