@@ -13,15 +13,5 @@
   },
   "devDependencies": {
     "electron-builder": "^24.0.0"
-  },
-  "build": {
-    "appId": "com.agentic.harness",
-    "productName": "AgenticHarness",
-    "directories": {
-      "output": "dist"
-    },
-    "win": { "target": "nsis" },
-    "mac": { "target": "dmg" },
-    "linux": { "target": "AppImage" }
   }
 }
