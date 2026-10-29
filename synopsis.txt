@@ -270,8 +270,9 @@ agentic-harness/
 │   │   └── ipcHandlers.js
 │   ├── renderer/
 │   │   ├── index.html
+│   │   ├── app.jsx (for react)
 │   │   ├── style.css
-│   │   └── app.js
+│   │   └── app.jsx
 │   ├── agents/
 │   │   ├── baseAgent.js
 │   │   └── agents.json
@@ -396,3 +397,47 @@ their data, tools, and execution environment.
 ================================================================================
                          END OF SYNOPSIS
 ================================================================================
+
+
+
+
+Frontend {
+
+   Pannel (Main front app interface){
+
+      simple pannel like chatgpt
+   }
+   Pannel (editor) {
+
+      built in editor
+   }
+
+   Pannel (History){
+
+      new chat
+      recent chat
+      account section
+
+   }
+
+   plugins pannel {
+      here we will add plugins
+      like canva, etc
+   }
+
+}
+
+Backend {
+   Server{
+      main where everthing will we handled
+   }
+   Agent loop{
+      it will we used as a tool or function
+   }
+   rendering{
+      front page will we rendered.
+   }
+
+}
+
+
