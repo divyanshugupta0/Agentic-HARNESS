@@ -9,9 +9,16 @@
     "package": "electron-builder"
   },
   "dependencies": {
-    "electron": "^25.0.0"
+    "electron": "^25.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "electron-builder": "^24.0.0"
+    "@babel/core": "^7.20.0",
+    "@babel/preset-env": "^7.20.0",
+    "@babel/preset-react": "^7.20.0",
+    "babel-loader": "^9.1.0",
+    "electron-builder": "^24.0.0",
+    "esbuild": "^0.17.0"
   }
 }
