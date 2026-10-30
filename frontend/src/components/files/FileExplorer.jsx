@@ -1,15 +1,8 @@
 import React, { useState } from 'react';
-import {
-  Folder,
-  FolderOpen,
-  FileText,
-  FileCode,
-  FileJson,
-  Plus,
-  Trash2,
-  Clock
-} from 'lucide-react';
-import { useWorkspace } from '../../context/WorkspaceContext';
+import { Plus, Trash2, Clock } from 'lucide-react';
+import { useWorkspace } from '../../hooks/useWorkspace';
+import { getFileIcon } from '../../utils/fileIcons';
+import { formatClockTime } from '../../utils/formatDate';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 
@@ -17,17 +10,6 @@ export function FileExplorer() {
   const { files, activeFile, openFile, createFile, deleteFile, recentlyModified } = useWorkspace();
   const [isNewFileModalOpen, setIsNewFileModalOpen] = useState(false);
   const [newFileName, setNewFileName] = useState('');
-
-  const getFileIcon = (type) => {
-    switch (type) {
-      case 'json':
-        return <FileJson size={14} color="var(--accent-amber)" />;
-      case 'javascript':
-        return <FileCode size={14} color="var(--accent-cyan)" />;
-      default:
-        return <FileText size={14} color="var(--text-secondary)" />;
-    }
-  };
 
   const handleCreate = (e) => {
     e.preventDefault();
@@ -110,7 +92,7 @@ export function FileExplorer() {
                 {file.name}
               </span>
               <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                {new Date(file.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {formatClockTime(file.updatedAt)}
               </span>
             </div>
           ))}
@@ -151,4 +133,3 @@ export function FileExplorer() {
     </div>
   );
 }
-

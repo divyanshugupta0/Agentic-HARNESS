@@ -6,7 +6,8 @@
   },
   "files": [
     "src/**/*",
-    "public/**/*"
+    "public/**/*",
+    "../frontend/dist/**/*"
   ],
   "win": { "target": "nsis" },
   "mac": { "target": "dmg" },

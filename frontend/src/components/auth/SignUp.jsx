@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../common/Button';
 
 export function SignUp({ onSwitchMode }) {
@@ -141,4 +141,3 @@ export function SignUp({ onSwitchMode }) {
     </form>
   );
 }
-

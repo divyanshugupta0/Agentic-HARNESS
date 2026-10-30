@@ -9,10 +9,11 @@ import {
   Settings,
   Bot
 } from 'lucide-react';
-import { useWorkspace } from '../../context/WorkspaceContext';
-import { useChat } from '../../context/ChatContext';
-import { useAuth } from '../../context/AuthContext';
-import { TABS, CONVERSATION_GROUPS } from '../../constants/navigation';
+import { useWorkspace } from '../../hooks/useWorkspace';
+import { useChat } from '../../hooks/useChat';
+import { useAuth } from '../../hooks/useAuth';
+import { TABS } from '../../constants/navigation';
+import { groupConversationsByDate } from '../../utils/formatDate';
 import { Modal } from '../common/Modal';
 
 export function Sidebar() {
@@ -31,44 +32,7 @@ export function Sidebar() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
-  // Group conversations by relative date
-  const groupConversations = () => {
-    const groups = {
-      [CONVERSATION_GROUPS.TODAY]: [],
-      [CONVERSATION_GROUPS.YESTERDAY]: [],
-      [CONVERSATION_GROUPS.PREVIOUS_7_DAYS]: [],
-      [CONVERSATION_GROUPS.OLDER]: []
-    };
-
-    const now = new Date();
-    const todayStr = now.toDateString();
-
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toDateString();
-
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    conversations.forEach((conv) => {
-      const convDate = new Date(conv.updatedAt || Date.now());
-      const convDateStr = convDate.toDateString();
-
-      if (convDateStr === todayStr) {
-        groups[CONVERSATION_GROUPS.TODAY].push(conv);
-      } else if (convDateStr === yesterdayStr) {
-        groups[CONVERSATION_GROUPS.YESTERDAY].push(conv);
-      } else if (convDate > sevenDaysAgo) {
-        groups[CONVERSATION_GROUPS.PREVIOUS_7_DAYS].push(conv);
-      } else {
-        groups[CONVERSATION_GROUPS.OLDER].push(conv);
-      }
-    });
-
-    return groups;
-  };
-
-  const grouped = groupConversations();
+  const grouped = groupConversationsByDate(conversations);
 
   const handleNewChat = () => {
     createNewChat('New Agent Mission');
@@ -335,4 +299,3 @@ export function Sidebar() {
     </aside>
   );
 }
-

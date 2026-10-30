@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useChat } from '../../context/ChatContext';
+import { useChat } from '../../hooks/useChat';
 import { ChatWelcome } from './ChatWelcome';
 import { ChatMessage } from './ChatMessage';
 import { PromptInput } from './PromptInput';
@@ -53,4 +53,3 @@ export function ChatWorkspace() {
     </div>
   );
 }
-

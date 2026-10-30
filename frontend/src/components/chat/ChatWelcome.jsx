@@ -1,6 +1,5 @@
 import React from 'react';
 import { Bot, Search, Globe, FileCode, Cpu } from 'lucide-react';
-import { useChat } from '../../context/ChatContext';
 
 const STARTER_SUGGESTIONS = [
   {
@@ -66,4 +65,3 @@ export function ChatWelcome({ onSelectSuggestion }) {
     </div>
   );
 }
-

@@ -1,9 +1,9 @@
-// Development script
+// Development script for Agentic Harness Desktop
 const { spawn, execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-// 1. Build Vite frontend bundle
+// 1. Build modern Vite React frontend bundle
 const frontendDir = path.resolve(__dirname, '../../frontend');
 if (fs.existsSync(frontendDir)) {
   console.log('Building modern Vite React frontend...');
@@ -17,17 +17,7 @@ if (fs.existsSync(frontendDir)) {
   }
 }
 
-// 2. Build legacy fallback bundle
-try {
-  execSync('node scripts/build-renderer.js', {
-    stdio: 'inherit',
-    cwd: path.join(__dirname, '..')
-  });
-} catch (err) {
-  // Ignored if using Vite
-}
-
-// 3. Start Electron
+// 2. Start Electron
 let electronBinary;
 try {
   electronBinary = require('electron');
@@ -37,7 +27,7 @@ try {
 
 const mainPath = path.join(__dirname, '../src/main/main.js');
 
-// Crucial: Clean environment so Electron runs as GUI application rather than node
+// Crucial: Sanitize environment so Electron runs as GUI application rather than node
 const env = { ...process.env };
 delete env.ELECTRON_RUN_AS_NODE;
 

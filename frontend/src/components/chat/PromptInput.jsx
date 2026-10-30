@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { ArrowUp, Paperclip, Wrench, Square, Pause, Play, Check } from 'lucide-react';
-import { useChat } from '../../context/ChatContext';
+import { useChat } from '../../hooks/useChat';
 import { BUILTIN_TOOLS } from '../../constants/tools';
 
 export function PromptInput({ inputRef, value, onChange, onSubmit }) {
@@ -194,4 +194,3 @@ export function PromptInput({ inputRef, value, onChange, onSubmit }) {
     </div>
   );
 }
-

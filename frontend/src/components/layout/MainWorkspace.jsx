@@ -1,5 +1,5 @@
 import React from 'react';
-import { useWorkspace } from '../../context/WorkspaceContext';
+import { useWorkspace } from '../../hooks/useWorkspace';
 import { TABS } from '../../constants/navigation';
 import { Header } from './Header';
 import { ChatWorkspace } from '../chat/ChatWorkspace';
@@ -22,4 +22,3 @@ export function MainWorkspace() {
     </main>
   );
 }
-

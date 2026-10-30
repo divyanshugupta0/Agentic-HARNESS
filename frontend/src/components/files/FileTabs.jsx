@@ -1,20 +1,10 @@
 import React from 'react';
-import { X, FileText, FileCode, FileJson } from 'lucide-react';
-import { useWorkspace } from '../../context/WorkspaceContext';
+import { X } from 'lucide-react';
+import { useWorkspace } from '../../hooks/useWorkspace';
+import { getFileIcon } from '../../utils/fileIcons';
 
 export function FileTabs() {
   const { openFileTabs, activeFile, openFile, closeFileTab } = useWorkspace();
-
-  const getFileIcon = (type) => {
-    switch (type) {
-      case 'json':
-        return <FileJson size={14} color="var(--accent-amber)" />;
-      case 'javascript':
-        return <FileCode size={14} color="var(--accent-cyan)" />;
-      default:
-        return <FileText size={14} color="var(--text-secondary)" />;
-    }
-  };
 
   return (
     <div className="files-workspace__tabs" id="files-editor-tabs">
@@ -46,4 +36,3 @@ export function FileTabs() {
     </div>
   );
 }
-

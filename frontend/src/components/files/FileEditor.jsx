@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Save, Check } from 'lucide-react';
-import { useWorkspace } from '../../context/WorkspaceContext';
+import { useWorkspace } from '../../hooks/useWorkspace';
 import { Button } from '../common/Button';
 
 export function FileEditor() {
@@ -95,4 +95,3 @@ export function FileEditor() {
     </div>
   );
 }
-

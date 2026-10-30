@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { Modal } from '../common/Modal';
 import { SignIn } from './SignIn';
 import { SignUp } from './SignUp';
@@ -22,4 +22,3 @@ export function AuthLayout() {
     </Modal>
   );
 }
-

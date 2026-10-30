@@ -9,8 +9,8 @@ import {
   PanelLeft,
   Circle
 } from 'lucide-react';
-import { useWorkspace } from '../../context/WorkspaceContext';
-import { useChat } from '../../context/ChatContext';
+import { useWorkspace } from '../../hooks/useWorkspace';
+import { useChat } from '../../hooks/useChat';
 import { TABS } from '../../constants/navigation';
 import { AVAILABLE_MODELS } from '../../constants/models';
 import { Modal } from '../common/Modal';
@@ -170,4 +170,3 @@ export function Header() {
     </header>
   );
 }
-
