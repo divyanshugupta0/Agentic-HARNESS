@@ -4,7 +4,9 @@
   "description": "Node.js Electron-Based Agentic Harness",
   "main": "src/main/main.js",
   "scripts": {
+    "start": "node scripts/dev.js",
     "dev": "node scripts/dev.js",
+    "build:renderer": "node scripts/build-renderer.js",
     "build": "node scripts/build.js",
     "package": "electron-builder"
   },

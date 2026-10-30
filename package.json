@@ -1,26 +1,10 @@
 {
-    "name": "CodeSynq Project",
-    "version": "1.0.0",
-    "description": "Welcome to CodeSynq Desktop- JSON File",
-    "author": "You",
-    "settings": {
-        "theme": "dark",
-        "fontSize": 14,
-        "autoSave": true
-    },
-    "data": [
-        { "id": 1, "value": "Hello" },
-        { "id": 2, "value": "World" }
-    ],
-     "scripts": {
-    "start": "electron .",
-    "start:build": "npm run build:extension-runtime && electron .",
-    "build:extension-runtime": "node build-extension-runtime.js",
-    "postinstall": "electron-builder install-app-deps",
-    "server": "node server.js",
-    "dev": "nodemon server.js",
-    "version": "node bump-version.js",
-    "build:win": "npm run build:extension-runtime && node bump-version.js && electron-builder --win",
-    "build": "npm run build:win"
+  "name": "agentic-harness-workspace",
+  "version": "1.0.0",
+  "description": "Node.js Electron-Based Agentic Harness Workspace",
+  "scripts": {
+    "dev": "npm --prefix agentic-harness run dev",
+    "start": "npm --prefix agentic-harness run dev",
+    "build": "npm --prefix agentic-harness run build"
   }
 }
