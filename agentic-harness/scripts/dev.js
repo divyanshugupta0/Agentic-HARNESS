@@ -1,20 +1,33 @@
 // Development script
 const { spawn, execSync } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
-// 1. Build renderer bundle first
-console.log('Building React renderer bundle...');
+// 1. Build Vite frontend bundle
+const frontendDir = path.resolve(__dirname, '../../frontend');
+if (fs.existsSync(frontendDir)) {
+  console.log('Building modern Vite React frontend...');
+  try {
+    execSync('npm run build', {
+      stdio: 'inherit',
+      cwd: frontendDir
+    });
+  } catch (err) {
+    console.warn('Frontend build notice:', err.message);
+  }
+}
+
+// 2. Build legacy fallback bundle
 try {
   execSync('node scripts/build-renderer.js', {
     stdio: 'inherit',
     cwd: path.join(__dirname, '..')
   });
 } catch (err) {
-  console.error('Failed to build renderer bundle:', err.message);
-  process.exit(1);
+  // Ignored if using Vite
 }
 
-// 2. Start Electron
+// 3. Start Electron
 let electronBinary;
 try {
   electronBinary = require('electron');
@@ -24,7 +37,7 @@ try {
 
 const mainPath = path.join(__dirname, '../src/main/main.js');
 
-console.log('Launching Electron...');
+console.log('Launching Agentic Harness Electron Desktop...');
 const electron = spawn(electronBinary, [mainPath], {
   stdio: 'inherit'
 });

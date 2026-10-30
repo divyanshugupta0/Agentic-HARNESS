@@ -1,10 +1,12 @@
 {
   "name": "agentic-harness-workspace",
   "version": "1.0.0",
-  "description": "Node.js Electron-Based Agentic Harness Workspace",
+  "description": "Agentic Harness — Autonomous Local AI Agent Platform",
   "scripts": {
     "dev": "npm --prefix agentic-harness run dev",
     "start": "npm --prefix agentic-harness run dev",
-    "build": "npm --prefix agentic-harness run build"
+    "build": "npm --prefix agentic-harness run build",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:build": "npm --prefix frontend run build"
   }
 }

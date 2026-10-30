@@ -1,0 +1,55 @@
+/* ==========================================================================
+   AGENTIC HARNESS — Responsive Styles
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  .chat-welcome__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .marketplace__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .files-workspace__sidebar {
+    width: 220px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .sidebar--mobile-open {
+    transform: translateX(0);
+  }
+
+  .header {
+    padding: 0 12px;
+  }
+
+  .header__workspace-title {
+    display: none;
+  }
+
+  .files-workspace {
+    flex-direction: column;
+  }
+
+  .files-workspace__sidebar {
+    width: 100%;
+    height: 180px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .prompt-composer {
+    padding: 10px 12px 14px 12px;
+  }
+}

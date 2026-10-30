@@ -2,6 +2,7 @@
 const { ipcMain } = require('electron');
 const { BaseAgent } = require('../agents/baseAgent');
 const { MemoryStore } = require('../memory/memoryStore');
+const { readFile, writeFile } = require('../tools/fsTool');
 
 let activeRun = null;
 
@@ -107,6 +108,25 @@ function registerHandlers() {
       } catch (e) {}
     }
     return { status: 'resumed' };
+  });
+
+  // Secure File System IPC handlers
+  ipcMain.handle('file:read', async (event, filePath) => {
+    try {
+      const content = await readFile(filePath);
+      return { success: true, content };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('file:write', async (event, { path: filePath, content }) => {
+    try {
+      await writeFile(filePath, content);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
   });
 }
 
