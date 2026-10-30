@@ -9,10 +9,11 @@
     "build": "node scripts/build.js",
     "package": "electron-builder"
   },
-  "dependencies": {
-    "electron": "^25.0.0"
-  },
   "devDependencies": {
+    "electron": "^45.2.0",
     "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "dockerode": "^5.0.1"
   }
 }
