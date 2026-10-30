@@ -95,3 +95,4 @@ export function ChatMessage({ message }) {
     </div>
   );
 }
+

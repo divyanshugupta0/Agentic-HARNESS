@@ -41,3 +41,4 @@ export function Modal({ isOpen, onClose, title, children, footer, id, maxWidth =
     </div>
   );
 }
+

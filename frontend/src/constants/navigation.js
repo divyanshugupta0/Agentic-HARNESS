@@ -10,3 +10,4 @@ export const CONVERSATION_GROUPS = {
   PREVIOUS_7_DAYS: 'Previous 7 Days',
   OLDER: 'Older'
 };
+

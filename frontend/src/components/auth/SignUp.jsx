@@ -141,3 +141,4 @@ export function SignUp({ onSwitchMode }) {
     </form>
   );
 }
+

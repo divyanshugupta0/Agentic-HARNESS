@@ -91,3 +91,4 @@ export function PluginCard({ plugin, onToggleInstall, onToggleEnabled, onOpenDet
     </div>
   );
 }
+

@@ -194,3 +194,4 @@ export function PromptInput({ inputRef, value, onChange, onSubmit }) {
     </div>
   );
 }
+

@@ -127,3 +127,4 @@ export function PluginDetails({ plugin, isOpen, onClose, onSaveConfig }) {
     </Modal>
   );
 }
+

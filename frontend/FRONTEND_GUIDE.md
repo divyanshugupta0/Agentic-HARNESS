@@ -296,3 +296,4 @@ const unsubscribe = api.on('agent:custom-event', (data) => {
 });
 ```
 This ensures seamless operation both inside the Electron desktop app and during standalone web development.
+

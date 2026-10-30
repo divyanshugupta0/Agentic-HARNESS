@@ -6,3 +6,4 @@ export const AVAILABLE_MODELS = [
 ];
 
 export const DEFAULT_MODEL_ID = 'claude-3-7-sonnet';
+

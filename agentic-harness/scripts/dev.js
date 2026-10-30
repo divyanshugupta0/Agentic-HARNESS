@@ -37,9 +37,14 @@ try {
 
 const mainPath = path.join(__dirname, '../src/main/main.js');
 
+// Crucial: Clean environment so Electron runs as GUI application rather than node
+const env = { ...process.env };
+delete env.ELECTRON_RUN_AS_NODE;
+
 console.log('Launching Agentic Harness Electron Desktop...');
 const electron = spawn(electronBinary, [mainPath], {
-  stdio: 'inherit'
+  stdio: 'inherit',
+  env
 });
 
 electron.on('close', (code) => {
