@@ -30,12 +30,12 @@ export async function AgentSandbox {
         const timeoutPromise = new Promise((_, reject) => {
             timeoutId = setTimeout(async () => {
                 try {
-                    console.warn('[Sandbox Timeout] Agent exceeded ${timeoutMs}ms. Killing container...');
+                    console.warn(`[Sandbox Timeout] Agent exceeded ${timeoutMs}ms. Killing container...`);
                     await container.kill();
                 }catch{
                     //container might have already killed
                 }
-                reject(new Error('Security Exception: Agent execution timeout after ${timeoutMs}ms'));
+                reject(new Error(`Security Exception: Agent execution timeout after ${timeoutMs}ms`));
             }, timeoutMs);
         });
 
