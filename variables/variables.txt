@@ -1,0 +1,1743 @@
+====================================================================================================
+AGENTIC HARNESS — COMPLETE FRONTEND VARIABLES, IDS, CLASSES & BACKEND INTEGRATION SPECIFICATION
+====================================================================================================
+Project Root: D:\Major_project\frontend
+Target Document: variables/variables.txt
+Generated Date: 2026-11-06
+Purpose: Comprehensive catalog of all frontend variables, HTML element IDs, CSS classes, CSS tokens,
+         React states, IPC channels, data models, props, and storage keys for seamless backend binding.
+
+====================================================================================================
+TABLE OF CONTENTS
+====================================================================================================
+1. SECTION 1: HTML ELEMENT IDs (Buttons, Divs, Forms, Modals, Inputs)
+2. SECTION 2: CSS CLASS NAMES (BEM Architecture: Layout, Components, Buttons, Backgrounds)
+3. SECTION 3: CSS VARIABLES / DESIGN TOKENS (Colors, Backgrounds, Borders, Dimensions, Radii)
+4. SECTION 4: GLOBAL REACT CONTEXT STATE VARIABLES (Auth, Chat, Workspace)
+5. SECTION 5: LOCAL COMPONENT STATE & REF VARIABLES (useState & useRef)
+6. SECTION 6: BACKEND IPC & API COMMUNICATION VARIABLES (Channels, Payloads, Event Hooks)
+7. SECTION 7: DATA MODEL PROPERTY VARIABLES (User, Conversation, Message, File, Plugin, Tool)
+8. SECTION 8: COMPONENT PROPS VARIABLES (Reusable Atomic & Modular Components)
+9. SECTION 9: LOCAL STORAGE PERSISTENCE KEYS & VARIABLES
+10. SECTION 10: BACKEND BINDING & ENDPOINT MAPPING BLUEPRINT
+
+====================================================================================================
+SECTION 1: HTML ELEMENT IDs (Buttons, Divs, Forms, Modals, Inputs)
+====================================================================================================
+This section contains all unique HTML `id` attributes defined in the frontend. These IDs serve as primary
+DOM hooks for accessibility, testing, automation, UI event binding, and backend element targeting.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: app-root
+- Element Type: <div>
+- Where Used: frontend/index.html (Line 16), mounted in frontend/src/main.jsx (Line 5)
+- Why Used: Top-level mounting target for React 18 createRoot() DOM injection tree.
+- When Used: Application boot time when the browser or Electron window initializes.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: app-layout
+- Element Type: <div>
+- Where Used: frontend/src/components/layout/AppLayout.jsx (Line 7)
+- Why Used: Root container for desktop split-pane UI, encapsulating Sidebar and MainWorkspace.
+- When Used: Continuously rendered as the top-level structural wrapper of the workspace.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: app-header
+- Element Type: <header>
+- Where Used: frontend/src/components/layout/Header.jsx (Line 33)
+- Why Used: Top application header housing navigation tabs, model switch trigger, and agent status.
+- When Used: Rendered permanently at the top of the main workspace pane.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: sidebar-toggle-btn
+- Element Type: <button>
+- Where Used: frontend/src/components/layout/Header.jsx (Line 40)
+- Why Used: Toggles the collapsible state of the left navigation sidebar (expanded vs collapsed).
+- When Used: Clicked by user to expand or collapse sidebar (invokes toggleSidebar from WorkspaceContext).
+
+----------------------------------------------------------------------------------------------------
+ID NAME: header-model-selector
+- Element Type: <button>
+- Where Used: frontend/src/components/layout/Header.jsx (Line 55)
+- Why Used: Displays the currently selected AI model badge and triggers model selection modal.
+- When Used: Clicked by user to switch AI models (e.g. Claude 3.7, DeepSeek R1, GPT-4o, Ollama).
+
+----------------------------------------------------------------------------------------------------
+ID NAME: header-navigation-tabs
+- Element Type: <nav>
+- Where Used: frontend/src/components/layout/Header.jsx (Line 64)
+- Why Used: Accessible wrapper for the modular workspace tab switcher (Chat, Files, Marketplace).
+- When Used: Always rendered in the center of the application header.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: tab-chat
+- Element Type: <button>
+- Where Used: frontend/src/components/layout/Header.jsx (Line 67)
+- Why Used: Navigation tab button to switch view to conversational AI agent interface (TABS.CHAT).
+- When Used: Clicked by user to navigate to Chat workspace.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: tab-files
+- Element Type: <button>
+- Where Used: frontend/src/components/layout/Header.jsx (Line 77)
+- Why Used: Navigation tab button to switch view to file explorer and code editor (TABS.FILES).
+- When Used: Clicked by user to open Files manager or auto-triggered when opening a workspace file.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: tab-marketplace
+- Element Type: <button>
+- Where Used: frontend/src/components/layout/Header.jsx (Line 87)
+- Why Used: Navigation tab button to switch view to agent plugins/tools catalog (TABS.MARKETPLACE).
+- When Used: Clicked by user to discover, install, or configure extensions and plugins.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: agent-status-indicator
+- Element Type: <div>
+- Where Used: frontend/src/components/layout/Header.jsx (Line 110)
+- Why Used: Visual status pill displaying live agent execution state ('idle', 'running', 'paused', 'stopped').
+- When Used: Re-rendered dynamically whenever agentStatus changes via backend events or user controls.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: model-selector-modal
+- Element Type: <div> (Modal wrapper)
+- Where Used: frontend/src/components/layout/Header.jsx (Line 124)
+- Why Used: Modal dialog container presenting available foundation models for user selection.
+- When Used: Rendered conditionally when isModelModalOpen === true.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: main-workspace
+- Element Type: <main>
+- Where Used: frontend/src/components/layout/MainWorkspace.jsx (Line 14)
+- Why Used: Main content landmark wrapping header and dynamic view panes (Chat, Files, Marketplace).
+- When Used: Always visible occupying full right pane beside sidebar.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: sidebar-container
+- Element Type: <aside>
+- Where Used: frontend/src/components/layout/Sidebar.jsx (Line 51)
+- Why Used: Primary collapsible navigation sidebar containing branding, chat history, and user profile.
+- When Used: Always rendered on the left; class toggles between expanded and collapsed state.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: sidebar-new-chat-button
+- Element Type: <button>
+- Where Used: frontend/src/components/layout/Sidebar.jsx (Line 84)
+- Why Used: Initiates a fresh agent conversation and switches active tab to chat.
+- When Used: Clicked by user to create a new agent mission.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: sidebar-search-button
+- Element Type: <button>
+- Where Used: frontend/src/components/layout/Sidebar.jsx (Line 95)
+- Why Used: Triggers modal dialog to filter and search historical agent missions.
+- When Used: Clicked by user or activated via Command/Ctrl+K shortcut.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: sidebar-history-list
+- Element Type: <div>
+- Where Used: frontend/src/components/layout/Sidebar.jsx (Line 105)
+- Why Used: Scrollable list container rendering conversations grouped by timeframe (Today, Yesterday, etc.).
+- When Used: Rendered continuously in sidebar; updates whenever conversations are created or deleted.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: sidebar-user-profile
+- Element Type: <div>
+- Where Used: frontend/src/components/layout/Sidebar.jsx (Line 175)
+- Why Used: Bottom sidebar section displaying active authenticated user avatar, role, and actions.
+- When Used: Rendered continuously; shows user details if authenticated or Sign In button if guest.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: sidebar-signin-button
+- Element Type: <button>
+- Where Used: frontend/src/components/layout/Sidebar.jsx (Line 214)
+- Why Used: Button displayed when unauthenticated to open user login modal dialog.
+- When Used: Clicked by guest user to authenticate.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: sidebar-search-modal
+- Element Type: <div> (Modal wrapper)
+- Where Used: frontend/src/components/layout/Sidebar.jsx (Line 227)
+- Why Used: Modal dialog containing live search input and filtered historical conversation list.
+- When Used: Opened when isSearchModalOpen === true.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: sidebar-settings-modal
+- Element Type: <div> (Modal wrapper)
+- Where Used: frontend/src/components/layout/Sidebar.jsx (Line 272)
+- Why Used: Modal dialog inspecting local desktop runtime configuration, sandbox status, and storage.
+- When Used: Opened when user clicks gear icon on their profile.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: chat-workspace-container
+- Element Type: <div>
+- Where Used: frontend/src/components/chat/ChatWorkspace.jsx (Line 37)
+- Why Used: Top container for active conversation messages and bottom composer box.
+- When Used: Rendered when currentTab === 'chat'.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: chat-welcome-screen
+- Element Type: <div>
+- Where Used: frontend/src/components/chat/ChatWelcome.jsx (Line 33)
+- Why Used: Zero-state onboarding banner and prompt suggestions grid shown when a chat is empty.
+- When Used: Rendered inside chat workspace when active conversation has 0 messages.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: chat-message-list
+- Element Type: <div>
+- Where Used: frontend/src/components/chat/ChatWorkspace.jsx (Line 38)
+- Why Used: Scrollable message container holding bubbles for user prompts and assistant reasoning/results.
+- When Used: Continuously displays current conversation messages; scrolls to bottom on new messages.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: chat-prompt-composer
+- Element Type: <div>
+- Where Used: frontend/src/components/chat/PromptInput.jsx (Line 32)
+- Why Used: Outer container for prompt textarea, attachments, tool selector, and action buttons.
+- When Used: Rendered fixed at the bottom of the chat workspace.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: chat-prompt-input
+- Element Type: <textarea>
+- Where Used: frontend/src/components/chat/PromptInput.jsx (Line 63)
+- Why Used: Multiline input field where the user writes agent task instructions and prompts.
+- When Used: User types mission objective; submitted via Enter key or Send button.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: prompt-attach-file-btn
+- Element Type: <button>
+- Where Used: frontend/src/components/chat/PromptInput.jsx (Line 87)
+- Why Used: Triggers hidden file input to attach a local file as context for the agent.
+- When Used: Clicked by user to upload or select a context file.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: prompt-tools-selector-btn
+- Element Type: <button>
+- Where Used: frontend/src/components/chat/PromptInput.jsx (Line 99)
+- Why Used: Opens popover menu to toggle active agent tools (fsTool, shellTool, httpTool, webSearch).
+- When Used: Clicked by user to inspect and modify tool permissions before running a task.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: chat-send-button
+- Element Type: <button>
+- Where Used: frontend/src/components/chat/PromptInput.jsx (Line 183)
+- Why Used: Submits user prompt to execute agent mission via backend / Electron IPC bridge.
+- When Used: Clicked by user when textarea is non-empty and agent is not actively running.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: files-workspace-container
+- Element Type: <div>
+- Where Used: frontend/src/components/files/FilesWorkspace.jsx (Line 8)
+- Why Used: Split-pane workspace container holding file tree explorer, file tabs, and code editor.
+- When Used: Rendered when currentTab === 'files'.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: files-explorer
+- Element Type: <div>
+- Where Used: frontend/src/components/files/FileExplorer.jsx (Line 24)
+- Why Used: Left pane inside files workspace showing workspace files tree, recent files, and new file trigger.
+- When Used: Always rendered on left side of the Files workspace.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: files-create-button
+- Element Type: <button>
+- Where Used: frontend/src/components/files/FileExplorer.jsx (Line 32)
+- Why Used: Button opening modal dialog to create a new workspace file with custom extension.
+- When Used: Clicked by user in file explorer header.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: files-create-modal
+- Element Type: <div> (Modal wrapper)
+- Where Used: frontend/src/components/files/FileExplorer.jsx (Line 107)
+- Why Used: Modal dialog with input field and submit button for file creation.
+- When Used: Opened when isNewFileModalOpen === true.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: files-editor-tabs
+- Element Type: <div>
+- Where Used: frontend/src/components/files/FileTabs.jsx (Line 10)
+- Why Used: Horizontal tab strip displaying all open workspace files with close buttons and dirty badges.
+- When Used: Rendered along the top of the file editor pane.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: files-editor
+- Element Type: <div>
+- Where Used: frontend/src/components/files/FileEditor.jsx (Line 49)
+- Why Used: Editor container holding file info toolbar, line numbers gutter, and code textarea.
+- When Used: Rendered when a file is actively selected in the files workspace.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: files-save-button
+- Element Type: <button>
+- Where Used: frontend/src/components/files/FileEditor.jsx (Line 70)
+- Why Used: Triggers file saving to disk/backend storage via fileService.saveFile() and IPC.
+- When Used: Clicked by user or triggered by Ctrl/Cmd+S keyboard shortcut.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: marketplace-container
+- Element Type: <div>
+- Where Used: frontend/src/components/marketplace/Marketplace.jsx (Line 38)
+- Why Used: Catalog container displaying category pills, search input, and plugin cards grid.
+- When Used: Rendered when currentTab === 'marketplace'.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: plugin-card-${plugin.id} (e.g. plugin-card-plugin-fs, plugin-card-plugin-shell)
+- Element Type: <div>
+- Where Used: frontend/src/components/marketplace/PluginCard.jsx (Line 32)
+- Why Used: Dynamic unique ID for individual plugin cards in the marketplace grid.
+- When Used: Rendered for each registered plugin in the marketplace catalog.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: plugin-details-modal
+- Element Type: <div> (Modal wrapper)
+- Where Used: frontend/src/components/marketplace/PluginDetails.jsx (Line 21)
+- Why Used: Modal dialog to inspect permissions, author, and edit parameters for selected plugin.
+- When Used: Opened when user clicks settings icon on a plugin card.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: auth-modal
+- Element Type: <div> (Modal wrapper)
+- Where Used: frontend/src/components/auth/AuthLayout.jsx (Line 15)
+- Why Used: Modal dialog wrapper switching between SignIn and SignUp authentication views.
+- When Used: Opened when isAuthModalOpen === true.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: signin-form
+- Element Type: <form>
+- Where Used: frontend/src/components/auth/SignIn.jsx (Line 29)
+- Why Used: Form submission container for user authentication (email, password, remember me).
+- When Used: Rendered inside AuthLayout modal when mode is 'signin'; handles submit event.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: signin-submit-btn
+- Element Type: <button>
+- Where Used: frontend/src/components/auth/SignIn.jsx (Line 99)
+- Why Used: Form submit button executing signIn() request against authService / backend.
+- When Used: Clicked by user or triggered on enter key in sign-in form.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: signup-form
+- Element Type: <form>
+- Where Used: frontend/src/components/auth/SignUp.jsx (Line 41)
+- Why Used: Form submission container for creating a new user account profile.
+- When Used: Rendered inside AuthLayout modal when mode is 'signup'; handles submit event.
+
+----------------------------------------------------------------------------------------------------
+ID NAME: signup-submit-btn
+- Element Type: <button>
+- Where Used: frontend/src/components/auth/SignUp.jsx (Line 129)
+- Why Used: Form submit button executing signUp() registration request against backend.
+- When Used: Clicked by user or triggered on enter key in registration form.
+
+
+====================================================================================================
+SECTION 2: CSS CLASS NAMES (BEM Architecture: Layout, Components, Buttons, Backgrounds)
+====================================================================================================
+Styles adhere to the Block Element Modifier (BEM) naming convention across layout.css, components.css,
+and responsive.css. These class names dictate presentation, component bounds, and visual state.
+
+----------------------------------------------------------------------------------------------------
+LAYOUT & SHELL CLASSES (frontend/src/styles/layout.css)
+----------------------------------------------------------------------------------------------------
+CLASS NAME: .app-layout
+- Where Used: AppLayout.jsx (Line 7), layout.css (Line 6)
+- Why Used: Full-viewport flex container (100vw, 100vh) structuring sidebar and main workspace.
+- When Used: Always active at root.
+
+CLASS NAME: .sidebar
+- Where Used: Sidebar.jsx (Line 50), layout.css (Line 18)
+- Why Used: Left navigation sidebar container with fixed width (var(--sidebar-width)), border, and flex layout.
+- When Used: Rendered permanently; position shifts to off-screen drawer on mobile breakpoints (<768px).
+
+CLASS NAME: .sidebar--collapsed
+- Where Used: Sidebar.jsx (Line 50), layout.css (Line 31)
+- Why Used: Modifier class reducing sidebar width to 68px (icon-only mode).
+- When Used: Applied conditionally when isSidebarCollapsed === true.
+
+CLASS NAME: .sidebar--mobile-open
+- Where Used: responsive.css (Line 29)
+- Why Used: Modifier translating off-screen mobile drawer into view (transform: translateX(0)).
+- When Used: Triggered on mobile viewports (<768px) when sidebar toggle button is tapped.
+
+CLASS NAME: .sidebar__header
+- Where Used: Sidebar.jsx (Line 54), layout.css (Line 35)
+- Why Used: Header row containing brand logo, application title, and top border separator.
+- When Used: Always rendered at top of sidebar.
+
+CLASS NAME: .sidebar__brand
+- Where Used: Sidebar.jsx (Line 55), layout.css (Line 44)
+- Why Used: Flex row grouping logo icon and gradient brand typography.
+- When Used: Always rendered inside sidebar header.
+
+CLASS NAME: .sidebar__logo-icon
+- Where Used: layout.css (Line 53)
+- Why Used: Styles application logo avatar dimensions (28x28px) and border radius.
+- When Used: Applied to brand mark in sidebar header.
+
+CLASS NAME: .sidebar__brand-text
+- Where Used: Sidebar.jsx (Line 72), layout.css (Line 60)
+- Why Used: Gradient text styling for "Agentic Harness" brand title.
+- When Used: Rendered when sidebar is expanded.
+
+CLASS NAME: .sidebar__actions
+- Where Used: Sidebar.jsx (Line 78), layout.css (Line 70)
+- Why Used: Action buttons container holding "New Mission" and "Search missions" buttons.
+- When Used: Rendered beneath sidebar brand header.
+
+CLASS NAME: .sidebar__new-chat-btn
+- Where Used: Sidebar.jsx (Line 81), layout.css (Line 77)
+- Why Used: High-priority button styling with glow effect on hover to start new agent conversations.
+- When Used: Rendered inside sidebar actions; expands on hover.
+
+CLASS NAME: .sidebar__search-btn
+- Where Used: Sidebar.jsx (Line 93), layout.css (Line 100)
+- Why Used: Ghost-styled input-like button triggering conversation search dialog.
+- When Used: Rendered in sidebar actions when expanded.
+
+CLASS NAME: .sidebar__search-shortcut
+- Where Used: Sidebar.jsx (Line 99), layout.css (Line 119)
+- Why Used: Small keyboard shortcut badge styling (displays '⌘K').
+- When Used: Positioned on the right of the search button.
+
+CLASS NAME: .sidebar__history
+- Where Used: Sidebar.jsx (Line 105), layout.css (Line 130)
+- Why Used: Flex column with overflow-y: auto containing scrollable past mission list.
+- When Used: Takes all available vertical space between actions and footer.
+
+CLASS NAME: .sidebar__group
+- Where Used: Sidebar.jsx (Line 107, 129), layout.css (Line 139)
+- Why Used: Groups conversation items under date headings (e.g. Today, Yesterday, Previous 7 Days).
+- When Used: Rendered for each non-empty timeframe category.
+
+CLASS NAME: .sidebar__group-title
+- Where Used: Sidebar.jsx (Line 108, 131), layout.css (Line 145)
+- Why Used: Small uppercase, muted typography label for section grouping.
+- When Used: Rendered above each conversation group.
+
+CLASS NAME: .sidebar__item
+- Where Used: Sidebar.jsx (Line 112, 138), layout.css (Line 154)
+- Why Used: Individual conversation row button with title, icon, and hover action triggers.
+- When Used: Rendered for every loaded historical conversation.
+
+CLASS NAME: .sidebar__item--active
+- Where Used: Sidebar.jsx (Line 112, 138), layout.css (Line 174)
+- Why Used: Modifier highlighting currently selected conversation with cyan left border & background.
+- When Used: Applied when conv.id === activeConversationId.
+
+CLASS NAME: .sidebar__item-title
+- Where Used: Sidebar.jsx (Line 120, 148), layout.css (Line 181)
+- Why Used: Truncated single-line text label for conversation mission titles.
+- When Used: Rendered inside conversation row when sidebar is expanded.
+
+CLASS NAME: .sidebar__item-actions
+- Where Used: Sidebar.jsx (Line 149), layout.css (Line 188)
+- Why Used: Container for hover-revealed action icons (e.g. Delete conversation trash icon).
+- When Used: Becomes display: flex when user hovers over conversation row.
+
+CLASS NAME: .sidebar__footer
+- Where Used: Sidebar.jsx (Line 175), layout.css (Line 199)
+- Why Used: Pinned bottom bar in sidebar with top border housing user profile or login CTA.
+- When Used: Always rendered at bottom of sidebar.
+
+CLASS NAME: .sidebar__profile
+- Where Used: Sidebar.jsx (Line 177), layout.css (Line 205)
+- Why Used: Clickable profile container displaying user avatar, name, and settings/sign-out buttons.
+- When Used: Rendered in footer when isAuthenticated === true.
+
+CLASS NAME: .sidebar__avatar
+- Where Used: Sidebar.jsx (Line 178), layout.css (Line 220)
+- Why Used: 32x32px circular avatar with linear gradient background and initials text.
+- When Used: Rendered for active user or guest in sidebar profile.
+
+CLASS NAME: .sidebar__profile-info
+- Where Used: Sidebar.jsx (Line 183), layout.css (Line 234)
+- Why Used: Column layout for user name and role subtitle.
+- When Used: Rendered when sidebar is expanded.
+
+CLASS NAME: .sidebar__username
+- Where Used: Sidebar.jsx (Line 184), layout.css (Line 242)
+- Why Used: Bold font styling for user display name.
+- When Used: Rendered inside profile info.
+
+CLASS NAME: .sidebar__user-status
+- Where Used: Sidebar.jsx (Line 185), layout.css (Line 250)
+- Why Used: Muted text styling for user role or subscription tier.
+- When Used: Rendered beneath username.
+
+CLASS NAME: .header
+- Where Used: Header.jsx (Line 33), layout.css (Line 258)
+- Why Used: Horizontal workspace navigation header with 56px height and bottom border.
+- When Used: Always rendered across the top of MainWorkspace.
+
+CLASS NAME: .header__left
+- Where Used: Header.jsx (Line 34), layout.css (Line 270)
+- Why Used: Flex row aligning sidebar toggle button, workspace title, and model badge.
+- When Used: Left section of header.
+
+CLASS NAME: .header__workspace-info
+- Where Used: Header.jsx (Line 45), layout.css (Line 276)
+- Why Used: Container for workspace title text.
+- When Used: Rendered next to sidebar toggle button; hidden on small screens (<768px).
+
+CLASS NAME: .header__workspace-title
+- Where Used: Header.jsx (Line 46), layout.css (Line 282), responsive.css (Line 37)
+- Why Used: Displays "Workspace" title text.
+- When Used: Rendered on desktop viewports.
+
+CLASS NAME: .header__model-badge
+- Where Used: Header.jsx (Line 52), layout.css (Line 288)
+- Why Used: Interactive rounded pill button displaying active model name with Sparkles icon.
+- When Used: Rendered in header left section; opens model selector on click.
+
+CLASS NAME: .header__tabs
+- Where Used: Header.jsx (Line 64), layout.css (Line 307)
+- Why Used: Segmented navigation container holding Chat, Files, and Marketplace view tab triggers.
+- When Used: Centered in header bar.
+
+CLASS NAME: .header__tab-btn
+- Where Used: Header.jsx (Line 68, 78, 88), layout.css (Line 317)
+- Why Used: Tab button styling with icon and label for workspace view switching.
+- When Used: Rendered for each tab option.
+
+CLASS NAME: .header__tab-btn--active
+- Where Used: Header.jsx (Line 68, 78, 88), layout.css (Line 333)
+- Why Used: Modifier styling active tab with elevated background and drop shadow.
+- When Used: Applied when currentTab matches the tab's ID.
+
+CLASS NAME: .header__right
+- Where Used: Header.jsx (Line 97), layout.css (Line 339)
+- Why Used: Right section flex container aligning agent status indicator pill.
+- When Used: Always rendered on far right of header.
+
+CLASS NAME: .main-workspace
+- Where Used: MainWorkspace.jsx (Line 14), layout.css (Line 348)
+- Why Used: Main content area filling remaining width after sidebar.
+- When Used: Permanent right structural layout shell.
+
+CLASS NAME: .main-workspace__content
+- Where Used: MainWorkspace.jsx (Line 16), layout.css (Line 358)
+- Why Used: Scrollable content container with calc(100% - var(--header-height)) height.
+- When Used: Wraps the active tab's workspace component.
+
+----------------------------------------------------------------------------------------------------
+BUTTON & COMMON CLASSES (frontend/src/styles/components.css)
+----------------------------------------------------------------------------------------------------
+CLASS NAME: .btn
+- Where Used: Button.jsx (Line 28), components.css (Line 8)
+- Why Used: Base button styling with flex alignment, transitions, font settings, and padding.
+- When Used: Base class for all Button component instances.
+
+CLASS NAME: .btn--primary
+- Where Used: Button.jsx (Line 19), components.css (Line 29)
+- Why Used: Accent blue background with glow hover for primary actions (Submit, Send, Create).
+- When Used: Applied when variant="primary".
+
+CLASS NAME: .btn--secondary
+- Where Used: Button.jsx (Line 19), components.css (Line 41)
+- Why Used: Dark elevated background with subtle border for standard actions.
+- When Used: Applied when variant="secondary" (default).
+
+CLASS NAME: .btn--ghost
+- Where Used: Button.jsx (Line 19), components.css (Line 52)
+- Why Used: Transparent background with hover fill for secondary or cancel actions.
+- When Used: Applied when variant="ghost".
+
+CLASS NAME: .btn--danger
+- Where Used: Button.jsx (Line 19), components.css (Line 63)
+- Why Used: Subtle red tint turning solid red on hover for destructive actions (Delete).
+- When Used: Applied when variant="danger".
+
+CLASS NAME: .btn--sm
+- Where Used: Button.jsx (Line 20), components.css (Line 74)
+- Why Used: Modifier reducing padding (4px 10px) and font-size (12px) for compact toolbars.
+- When Used: Applied when size="sm".
+
+CLASS NAME: .btn-icon
+- Where Used: IconButton.jsx (Line 23), Header.jsx, Sidebar.jsx, components.css (Line 80)
+- Why Used: Compact 32x32px square/rounded button designed exclusively for Lucide icons.
+- When Used: Rendered for sidebar toggle, close buttons, trash triggers, and attachments.
+
+CLASS NAME: .btn-icon--active
+- Where Used: IconButton.jsx (Line 23), components.css (Line 100)
+- Why Used: Highlights active icon buttons with cyan accent color and border.
+- When Used: Applied when isActive === true.
+
+CLASS NAME: .modal-overlay
+- Where Used: Modal.jsx (Line 21), components.css (Line 109)
+- Why Used: Full-screen fixed backdrop with blur filter (rgba(10, 13, 20, 0.75)) and fade-in animation.
+- When Used: Rendered whenever a Modal is open.
+
+CLASS NAME: .modal-content
+- Where Used: Modal.jsx (Line 23), components.css (Line 122)
+- Why Used: Central card container with border, rounded corners, box shadow, and slide-up animation.
+- When Used: Rendered inside modal overlay.
+
+CLASS NAME: .modal-header
+- Where Used: Modal.jsx (Line 27), components.css (Line 135)
+- Why Used: Header bar of modal with title text and close (X) icon button.
+- When Used: Rendered at top of modal content.
+
+CLASS NAME: .modal-title
+- Where Used: Modal.jsx (Line 28), components.css (Line 143)
+- Why Used: Font styling (16px, semi-bold) for modal dialog headings.
+- When Used: Rendered inside modal header.
+
+CLASS NAME: .modal-body
+- Where Used: Modal.jsx (Line 38), components.css (Line 149)
+- Why Used: Scrollable content container for modal children with 70vh max-height.
+- When Used: Rendered between header and footer in modal.
+
+CLASS NAME: .modal-footer
+- Where Used: Modal.jsx (Line 39), components.css (Line 155)
+- Why Used: Bottom actions bar with top border aligning confirmation and cancel buttons.
+- When Used: Rendered conditionally when modal has footer prop.
+
+----------------------------------------------------------------------------------------------------
+CHAT WORKSPACE CLASSES (frontend/src/styles/components.css)
+----------------------------------------------------------------------------------------------------
+CLASS NAME: .chat-workspace
+- Where Used: ChatWorkspace.jsx (Line 37), components.css (Line 178)
+- Why Used: Vertical flex container orchestrating message history stream and prompt composer.
+- When Used: Active view when Chat tab is selected.
+
+CLASS NAME: .chat-workspace__messages
+- Where Used: ChatWorkspace.jsx (Line 38), components.css (Line 187)
+- Why Used: Centered, scrollable message list with max-width: var(--composer-max-width).
+- When Used: Rendered above prompt composer; contains conversation bubbles.
+
+CLASS NAME: .chat-welcome
+- Where Used: ChatWelcome.jsx (Line 33), components.css (Line 200)
+- Why Used: Zero-state container centered vertically with welcome header and suggestions grid.
+- When Used: Displayed when current chat has no messages.
+
+CLASS NAME: .chat-welcome__header
+- Where Used: ChatWelcome.jsx (Line 34), components.css (Line 211)
+- Why Used: Centered column with bot badge, welcome heading, and description paragraph.
+- When Used: Top section of zero-state screen.
+
+CLASS NAME: .chat-welcome__icon-badge
+- Where Used: ChatWelcome.jsx (Line 35), components.css (Line 219)
+- Why Used: 56x56px gradient rounded square with cyan glow containing Bot icon.
+- When Used: Rendered above welcome title.
+
+CLASS NAME: .chat-welcome__title
+- Where Used: ChatWelcome.jsx (Line 38), components.css (Line 232)
+- Why Used: Large (26px, bold) heading welcoming user to Agentic Harness.
+- When Used: Rendered in welcome header.
+
+CLASS NAME: .chat-welcome__subtitle
+- Where Used: ChatWelcome.jsx (Line 39), components.css (Line 239)
+- Why Used: Descriptive subtitle explaining local agent workspace capabilities.
+- When Used: Rendered beneath welcome title.
+
+CLASS NAME: .chat-welcome__grid
+- Where Used: ChatWelcome.jsx (Line 45), components.css (Line 245), responsive.css (Line 6)
+- Why Used: 2-column grid of clickable starter prompt cards (collapses to 1-col on mobile).
+- When Used: Rendered in chat welcome screen.
+
+CLASS NAME: .chat-welcome__card
+- Where Used: ChatWelcome.jsx (Line 51), components.css (Line 253)
+- Why Used: Clickable prompt card with hover lift transition, title, icon, and description.
+- When Used: Rendered for each starter suggestion (Research, Website, Files, Automation).
+
+CLASS NAME: .chat-welcome__card-header
+- Where Used: ChatWelcome.jsx (Line 56), components.css (Line 274)
+- Why Used: Flex row with cyan icon and bold starter title.
+- When Used: Rendered at top of starter card.
+
+CLASS NAME: .chat-welcome__card-desc
+- Where Used: ChatWelcome.jsx (Line 60), components.css (Line 282)
+- Why Used: Small muted description text of what the suggestion accomplishes.
+- When Used: Rendered inside starter card.
+
+CLASS NAME: .chat-message
+- Where Used: ChatMessage.jsx (Line 19), components.css (Line 290)
+- Why Used: Row wrapper for message avatar and message bubble content.
+- When Used: Rendered for each message in active conversation.
+
+CLASS NAME: .chat-message--user
+- Where Used: ChatMessage.jsx (Line 19), components.css (Line 296, 318, 330, 350)
+- Why Used: Modifier aligning message to the right with user avatar and accent-blue bubble.
+- When Used: Applied when message.role === 'user'.
+
+CLASS NAME: .chat-message--assistant
+- Where Used: ChatMessage.jsx (Line 19), components.css (Line 312, 343)
+- Why Used: Modifier aligning message to the left with bot avatar and dark secondary bubble.
+- When Used: Applied when message.role === 'assistant'.
+
+CLASS NAME: .chat-message__avatar
+- Where Used: ChatMessage.jsx (Line 21), components.css (Line 300)
+- Why Used: 32x32px circular icon avatar indicating message sender (User or Bot).
+- When Used: Rendered beside each message bubble.
+
+CLASS NAME: .chat-message__content
+- Where Used: ChatMessage.jsx (Line 25), components.css (Line 323)
+- Why Used: Flex column wrapping thinking blocks, execution logs, bubble text, and timestamp.
+- When Used: Rendered next to message avatar (max-width: 80%).
+
+CLASS NAME: .chat-message__bubble
+- Where Used: ChatMessage.jsx (Line 66), components.css (Line 334)
+- Why Used: Rounded message bubble containing rendered text with word-break and pre-wrap.
+- When Used: Rendered for message content.
+
+CLASS NAME: .chat-message__thinking
+- Where Used: ChatMessage.jsx (Line 28), components.css (Line 357)
+- Why Used: Collapsible container displaying agent reasoning, task decomposition, and internal plan.
+- When Used: Rendered when assistant message has thinking data.
+
+CLASS NAME: .chat-message__thinking-header
+- Where Used: ChatMessage.jsx (Line 31), components.css (Line 367)
+- Why Used: Clickable header with Chevron icon and "Agent Reasoning & Plan" label.
+- When Used: Clicked by user to expand or collapse thinking trace.
+
+CLASS NAME: .chat-message__thinking-body
+- Where Used: ChatMessage.jsx (Line 38), components.css (Line 385)
+- Why Used: Monospace dark block displaying raw agent chain-of-thought text.
+- When Used: Visible when isThinkingOpen === true.
+
+CLASS NAME: .chat-message__execution
+- Where Used: ChatMessage.jsx (Line 47), components.css (Line 396)
+- Why Used: Box displaying live execution trace and terminal steps taken by agent.
+- When Used: Rendered when assistant message has executionSteps array.
+
+CLASS NAME: .chat-message__execution-header
+- Where Used: ChatMessage.jsx (Line 48), components.css (Line 404)
+- Why Used: Header row showing Terminal icon, "Action Execution Trace", and step count.
+- When Used: Rendered above execution step list.
+
+CLASS NAME: .chat-message__execution-list
+- Where Used: ChatMessage.jsx (Line 55), components.css (Line 418)
+- Why Used: Scrollable list of terminal execution logs in monospace font.
+- When Used: Rendered inside execution box.
+
+CLASS NAME: .chat-message__execution-item
+- Where Used: ChatMessage.jsx (Line 57), components.css (Line 429)
+- Why Used: Individual terminal log line with cyan accent text.
+- When Used: Rendered for each step string in executionSteps.
+
+CLASS NAME: .prompt-composer
+- Where Used: PromptInput.jsx (Line 32), components.css (Line 434), responsive.css (Line 52)
+- Why Used: Outer container centering composer with max-width: var(--composer-max-width).
+- When Used: Fixed at bottom of chat workspace.
+
+CLASS NAME: .prompt-composer__box
+- Where Used: PromptInput.jsx (Line 33), components.css (Line 443)
+- Why Used: Elevated pill-shaped container with border, shadow, and focus-within glow.
+- When Used: Houses textarea, attachments, and toolbar.
+
+CLASS NAME: .prompt-composer__textarea
+- Where Used: PromptInput.jsx (Line 64), components.css (Line 460)
+- Why Used: Auto-resizing multiline text input with custom scrollbar and placeholder.
+- When Used: User types mission prompts here.
+
+CLASS NAME: .prompt-composer__toolbar
+- Where Used: PromptInput.jsx (Line 73), components.css (Line 475)
+- Why Used: Bottom row inside composer separating tools on left and send button on right.
+- When Used: Rendered below textarea inside composer box.
+
+CLASS NAME: .prompt-composer__tools
+- Where Used: PromptInput.jsx (Line 74), components.css (Line 483)
+- Why Used: Flex row aligning file attachment button and tools configuration toggle.
+- When Used: Left side of composer toolbar.
+
+CLASS NAME: .prompt-composer__tool-badge
+- Where Used: PromptInput.jsx (Line 96), components.css (Line 489)
+- Why Used: Rounded pill button showing active tool count with Wrench icon.
+- When Used: Clicked to open tools popover menu.
+
+CLASS NAME: .prompt-composer__tool-badge--active
+- Where Used: PromptInput.jsx (Line 96), components.css (Line 508)
+- Why Used: Highlights tool badge with indigo accent when popover is open.
+- When Used: Applied when isToolsPopoverOpen === true.
+
+CLASS NAME: .prompt-composer__send-btn
+- Where Used: PromptInput.jsx (Line 184), components.css (Line 514)
+- Why Used: Circular 34x34px blue button with ArrowUp icon to execute agent missions.
+- When Used: Clicked by user or triggered via Enter key; disabled when prompt is empty or agent running.
+
+----------------------------------------------------------------------------------------------------
+FILES WORKSPACE CLASSES (frontend/src/styles/components.css)
+----------------------------------------------------------------------------------------------------
+CLASS NAME: .files-workspace
+- Where Used: FilesWorkspace.jsx (Line 8), components.css (Line 540), responsive.css (Line 41)
+- Why Used: Horizontal split-pane container holding explorer sidebar and editor main pane.
+- When Used: Rendered when Files tab is active.
+
+CLASS NAME: .files-workspace__sidebar
+- Where Used: FileExplorer.jsx (Line 24), components.css (Line 548), responsive.css (Line 14, 45)
+- Why Used: 280px left pane containing file tree hierarchy and recently modified files.
+- When Used: Left section of Files workspace.
+
+CLASS NAME: .files-workspace__sidebar-header
+- Where Used: FileExplorer.jsx (Line 25), components.css (Line 558)
+- Why Used: Header row of file explorer with "WORKSPACE FILES" title and "+ " new file button.
+- When Used: Top of file explorer sidebar.
+
+CLASS NAME: .files-workspace__sidebar-title
+- Where Used: FileExplorer.jsx (Line 26), components.css (Line 566)
+- Why Used: Muted uppercase tracking label for file tree section.
+- When Used: Inside file explorer header.
+
+CLASS NAME: .files-workspace__tree
+- Where Used: FileExplorer.jsx (Line 39), components.css (Line 574)
+- Why Used: Scrollable list of workspace files with icons, filenames, and delete actions.
+- When Used: Rendered inside file explorer sidebar.
+
+CLASS NAME: .files-workspace__tree-item
+- Where Used: FileExplorer.jsx (Line 45), components.css (Line 582)
+- Why Used: Clickable row for an individual file in the workspace tree.
+- When Used: Rendered for each file in workspace.
+
+CLASS NAME: .files-workspace__tree-item--active
+- Where Used: FileExplorer.jsx (Line 45), components.css (Line 601)
+- Why Used: Modifier highlighting currently open/active file with cyan text & elevated background.
+- When Used: Applied when file.id === activeFile?.id.
+
+CLASS NAME: .files-workspace__recent
+- Where Used: FileExplorer.jsx (Line 70), components.css (Line 607)
+- Why Used: Bottom section in file explorer displaying recently modified files with timestamps.
+- When Used: Rendered at bottom of file explorer.
+
+CLASS NAME: .files-workspace__recent-title
+- Where Used: FileExplorer.jsx (Line 73), components.css (Line 615)
+- Why Used: Uppercase label for recently modified files section.
+- When Used: Above recent files list.
+
+CLASS NAME: .files-workspace__main
+- Where Used: FilesWorkspace.jsx (Line 10), components.css (Line 623)
+- Why Used: Main editor section filling remaining width beside file explorer.
+- When Used: Contains file tabs and file editor.
+
+CLASS NAME: .files-workspace__tabs
+- Where Used: FileTabs.jsx (Line 10), components.css (Line 632)
+- Why Used: Horizontal scrollable tab bar (40px height) showing open files.
+- When Used: Rendered across top of editor pane.
+
+CLASS NAME: .files-workspace__tab
+- Where Used: FileTabs.jsx (Line 16), components.css (Line 642)
+- Why Used: Individual file tab button with file icon, name, dirty dot, and close (X) button.
+- When Used: Rendered for each open file in openFileTabs.
+
+CLASS NAME: .files-workspace__tab--active
+- Where Used: FileTabs.jsx (Line 16), components.css (Line 661)
+- Why Used: Highlights active tab with cyan bottom indicator border and elevated background.
+- When Used: Applied when file.id === activeFile?.id.
+
+CLASS NAME: .files-workspace__tab-close
+- Where Used: FileTabs.jsx (Line 24), components.css (Line 668)
+- Why Used: Close icon button inside file tab to close that tab.
+- When Used: Clicked by user to close an open file tab.
+
+CLASS NAME: .files-workspace__dirty-badge
+- Where Used: FileTabs.jsx (Line 21), FileEditor.jsx (Line 56), components.css (Line 704)
+- Why Used: 8x8px amber circular dot indicating unsaved changes in the file.
+- When Used: Rendered when file.isDirty === true.
+
+CLASS NAME: .files-workspace__editor
+- Where Used: FileEditor.jsx (Line 49), components.css (Line 679)
+- Why Used: Flex column wrapping editor toolbar and editor code pane.
+- When Used: Rendered when a file is open in editor.
+
+CLASS NAME: .files-workspace__editor-toolbar
+- Where Used: FileEditor.jsx (Line 51), components.css (Line 687)
+- Why Used: Top bar displaying file path, line count, character count, and Save button.
+- When Used: Rendered directly above code textarea.
+
+CLASS NAME: .files-workspace__editor-info
+- Where Used: FileEditor.jsx (Line 52), components.css (Line 696)
+- Why Used: Flex row displaying path, line count, character count, and unsaved changes notice.
+- When Used: Left side of editor toolbar.
+
+CLASS NAME: .files-workspace__editor-pane
+- Where Used: FileEditor.jsx (Line 77), components.css (Line 711)
+- Why Used: Container grouping synchronized line numbers gutter and code textarea.
+- When Used: Main editing area.
+
+CLASS NAME: .files-workspace__line-numbers
+- Where Used: FileEditor.jsx (Line 78), components.css (Line 720)
+- Why Used: 50px gutter with line numbers (1, 2, 3...) scrolling synchronously with textarea.
+- When Used: Rendered beside code textarea.
+
+CLASS NAME: .files-workspace__textarea
+- Where Used: FileEditor.jsx (Line 86), components.css (Line 731)
+- Why Used: Monospace code textarea with tab-size: 2, no spellcheck, and syntax padding.
+- When Used: Primary code and document editing interface.
+
+----------------------------------------------------------------------------------------------------
+MARKETPLACE CLASSES (frontend/src/styles/components.css)
+----------------------------------------------------------------------------------------------------
+CLASS NAME: .marketplace
+- Where Used: Marketplace.jsx (Line 38), components.css (Line 748)
+- Why Used: Scrollable catalog container padding header, search bar, category pills, and cards grid.
+- When Used: Active view when Marketplace tab is selected.
+
+CLASS NAME: .marketplace__header
+- Where Used: Marketplace.jsx (Line 40), components.css (Line 758)
+- Why Used: Top header row aligning catalog heading on left and search bar on right.
+- When Used: Top of marketplace workspace.
+
+CLASS NAME: .marketplace__heading
+- Where Used: Marketplace.jsx (Line 42), components.css (Line 765)
+- Why Used: Bold 22px heading for marketplace page.
+- When Used: Inside marketplace header.
+
+CLASS NAME: .marketplace__subtitle
+- Where Used: Marketplace.jsx (Line 43), components.css (Line 771)
+- Why Used: Descriptive subtitle explaining plugin and tools capabilities.
+- When Used: Beneath marketplace heading.
+
+CLASS NAME: .marketplace__search-bar
+- Where Used: Marketplace.jsx (Line 48), components.css (Line 777)
+- Why Used: Search input wrapper with Search icon and rounded borders (300px width).
+- When Used: Right side of marketplace header.
+
+CLASS NAME: .marketplace__categories
+- Where Used: Marketplace.jsx (Line 61), components.css (Line 788)
+- Why Used: Horizontal scrollable strip of category filter pills.
+- When Used: Rendered between header and grid.
+
+CLASS NAME: .marketplace__category-btn
+- Where Used: Marketplace.jsx (Line 66), components.css (Line 796)
+- Why Used: Rounded pill button for filtering plugins (e.g. 'All', 'AI Agents', 'Developer Tools').
+- When Used: Rendered for each category option.
+
+CLASS NAME: .marketplace__category-btn--active
+- Where Used: Marketplace.jsx (Line 66), components.css (Line 814)
+- Why Used: Highlights selected category pill with solid indigo background.
+- When Used: Applied when selectedCategory === category.
+
+CLASS NAME: .marketplace__grid
+- Where Used: Marketplace.jsx (Line 75), components.css (Line 820), responsive.css (Line 10)
+- Why Used: Responsive auto-fill CSS grid (minmax 320px) displaying plugin cards.
+- When Used: Main catalog grid.
+
+CLASS NAME: .plugin-card
+- Where Used: PluginCard.jsx (Line 32), components.css (Line 826)
+- Why Used: Elevated card container with hover lift transition, icon badge, name, and action footer.
+- When Used: Rendered for each plugin in catalog.
+
+CLASS NAME: .plugin-card__header
+- Where Used: PluginCard.jsx (Line 33), components.css (Line 843)
+- Why Used: Top row of plugin card with icon badge and category tag.
+- When Used: Top of plugin card.
+
+CLASS NAME: .plugin-card__icon-badge
+- Where Used: PluginCard.jsx (Line 34), components.css (Line 850)
+- Why Used: 42x42px square with rounded corners and cyan icon representing plugin category.
+- When Used: Inside plugin card header.
+
+CLASS NAME: .plugin-card__badge
+- Where Used: PluginCard.jsx (Line 37), components.css (Line 862)
+- Why Used: Small rounded tag displaying plugin category (e.g. 'AI Agents', 'File Management').
+- When Used: Right side of plugin card header.
+
+CLASS NAME: .plugin-card__body
+- Where Used: PluginCard.jsx (Line 40), components.css (Line 871)
+- Why Used: Container for plugin title and multi-line description.
+- When Used: Middle of plugin card.
+
+CLASS NAME: .plugin-card__name
+- Where Used: PluginCard.jsx (Line 41), components.css (Line 877)
+- Why Used: Semi-bold 15px title of the plugin/tool.
+- When Used: Inside plugin card body.
+
+CLASS NAME: .plugin-card__desc
+- Where Used: PluginCard.jsx (Line 42), components.css (Line 883)
+- Why Used: 13px muted description text of plugin functionality.
+- When Used: Beneath plugin name.
+
+CLASS NAME: .plugin-card__footer
+- Where Used: PluginCard.jsx (Line 45), components.css (Line 889)
+- Why Used: Bottom row with top border holding Enable/Disable toggle, Settings button, and Install CTA.
+- When Used: Pinned at bottom of plugin card.
+
+----------------------------------------------------------------------------------------------------
+AUTH FORM CLASSES (frontend/src/styles/components.css)
+----------------------------------------------------------------------------------------------------
+CLASS NAME: .auth-form
+- Where Used: SignIn.jsx (Line 29), SignUp.jsx (Line 41), components.css (Line 901)
+- Why Used: Vertical flex column with 16px gap wrapping form fields, buttons, and mode switcher.
+- When Used: Form container in SignIn and SignUp dialogs.
+
+CLASS NAME: .auth-form__group
+- Where Used: SignIn.jsx, SignUp.jsx, FileExplorer.jsx (Line 110), components.css (Line 907)
+- Why Used: Form field group pairing label with input wrapper.
+- When Used: Rendered for each form input.
+
+CLASS NAME: .auth-form__label
+- Where Used: SignIn.jsx, SignUp.jsx, FileExplorer.jsx (Line 111), components.css (Line 913)
+- Why Used: 13px semi-bold label for form fields.
+- When Used: Above input field.
+
+CLASS NAME: .auth-form__input-wrapper
+- Where Used: SignIn.jsx, SignUp.jsx, Sidebar.jsx (Line 230), components.css (Line 919)
+- Why Used: Bordered input shell with background, icon prefix, focus-within glow, and full width.
+- When Used: Wraps inputs and icons.
+
+CLASS NAME: .auth-form__input
+- Where Used: SignIn.jsx, SignUp.jsx, Sidebar.jsx (Line 234), Marketplace.jsx, components.css (Line 935)
+- Why Used: Unstyled text input taking 100% width with inherited typography.
+- When Used: Inside input wrapper.
+
+CLASS NAME: .auth-form__row
+- Where Used: SignIn.jsx (Line 83), components.css (Line 941)
+- Why Used: Flex row aligning "Remember me" checkbox on left and session notice on right.
+- When Used: Inside SignIn form.
+
+CLASS NAME: .auth-form__checkbox-label
+- Where Used: SignIn.jsx (Line 84), components.css (Line 948)
+- Why Used: Clickable label aligning checkbox input and text.
+- When Used: Inside auth form row.
+
+CLASS NAME: .auth-form__switch-link
+- Where Used: SignIn.jsx (Line 107), SignUp.jsx (Line 137), components.css (Line 956)
+- Why Used: Interactive cyan text link switching between Sign In and Sign Up modal views.
+- When Used: Clicked by user to switch auth modes.
+
+
+====================================================================================================
+SECTION 3: CSS VARIABLES / DESIGN TOKENS (frontend/src/styles/variables.css)
+====================================================================================================
+All styling relies on standardized CSS variables defined in :root. These tokens dictate colors, backgrounds,
+borders, typography, dimensions, radii, and transitions.
+
+----------------------------------------------------------------------------------------------------
+SURFACE & BACKGROUND TOKENS
+----------------------------------------------------------------------------------------------------
+TOKEN NAME: --bg-primary
+- Default Value: #0a0d14
+- Where Used: global.css (body), layout.css (.app-layout, .main-workspace, .header), components.css (.chat-message__execution, .files-workspace, .marketplace)
+- Why Used: Deepest dark workspace background for root viewport, main panes, and editors.
+- When Used: Rendered continuously as the primary surface color.
+
+TOKEN NAME: --bg-secondary
+- Default Value: #0f1420
+- Where Used: layout.css (.sidebar, .header__tabs), components.css (.modal-content, .chat-welcome__card, .chat-message--assistant .chat-message__bubble, .prompt-composer__box, .files-workspace__sidebar, .plugin-card)
+- Why Used: Secondary surface color for sidebars, cards, modals, tabs strip, and assistant message bubbles.
+- When Used: Rendered for elevated structural elements.
+
+TOKEN NAME: --bg-tertiary
+- Default Value: #161c2d
+- Where Used: layout.css (.sidebar__new-chat-btn, .header__model-badge), components.css (.btn--secondary, .chat-message__thinking, .prompt-composer__tool-badge, .plugin-card__icon-badge)
+- Why Used: Tertiary container background for buttons, badges, thinking drawers, and toolbars.
+- When Used: Rendered for interactive UI elements and secondary containers.
+
+TOKEN NAME: --bg-elevated
+- Default Value: #1e2638
+- Where Used: components.css (.chat-message--assistant .chat-message__avatar)
+- Why Used: Surface color for popovers, elevated badges, and avatar gradients.
+- When Used: Rendered for high-elevation components.
+
+TOKEN NAME: --bg-hover
+- Default Value: #263045
+- Where Used: layout.css (.sidebar__new-chat-btn:hover), components.css (.btn--secondary:hover, .files-workspace__tab-close:hover)
+- Why Used: Standard hover background color for clickable items, tabs, and buttons.
+- When Used: Applied on mouse hover states.
+
+TOKEN NAME: --bg-active
+- Default Value: #2f3b54
+- Where Used: variables.css design system token
+- Why Used: Active/pressed state background for buttons and list items.
+- When Used: Applied during mouse press or active selection.
+
+TOKEN NAME: --bg-input
+- Default Value: #121826
+- Where Used: components.css (.auth-form__input-wrapper)
+- Why Used: Dedicated background color for form inputs and text fields.
+- When Used: Rendered inside authentication inputs and search fields.
+
+TOKEN NAME: --bg-overlay
+- Default Value: rgba(10, 13, 20, 0.75)
+- Where Used: components.css (.modal-overlay)
+- Why Used: Semi-transparent backdrop darkening the UI behind modal dialogs.
+- When Used: Rendered when any modal is open.
+
+----------------------------------------------------------------------------------------------------
+BORDER & SEPARATOR TOKENS
+----------------------------------------------------------------------------------------------------
+TOKEN NAME: --border-subtle
+- Default Value: #1e2638
+- Where Used: layout.css (.sidebar, .header, .sidebar__header), components.css (.modal-header, .chat-message__bubble, .files-workspace__sidebar)
+- Why Used: Low-contrast border for structural dividers, panel boundaries, and toolbars.
+- When Used: Rendered permanently dividing layout regions.
+
+TOKEN NAME: --border-default
+- Default Value: #28334a
+- Where Used: components.css (.modal-content, .prompt-composer__box, .marketplace__search-bar, .auth-form__input-wrapper)
+- Why Used: Standard interactive border for cards, composer box, inputs, and modal edges.
+- When Used: Rendered around interactive elements and cards.
+
+TOKEN NAME: --border-focus
+- Default Value: #3b82f6
+- Where Used: variables.css design token
+- Why Used: High-contrast focus outline for accessibility and keyboard navigation.
+- When Used: Applied when buttons or inputs receive :focus-visible.
+
+TOKEN NAME: --border-accent
+- Default Value: #6366f1
+- Where Used: variables.css design token
+- Why Used: Brand border color highlighting featured cards or active configurations.
+- When Used: Rendered on active agent tools or highlighted items.
+
+----------------------------------------------------------------------------------------------------
+TYPOGRAPHY COLOR TOKENS
+----------------------------------------------------------------------------------------------------
+TOKEN NAME: --text-primary
+- Default Value: #f1f5f9
+- Where Used: global.css (body), layout.css, components.css
+- Why Used: Primary high-contrast typography color for headings, titles, code, and user input.
+- When Used: Primary text rendering.
+
+TOKEN NAME: --text-secondary
+- Default Value: #94a3b8
+- Where Used: layout.css (.sidebar__item), components.css (.chat-welcome__subtitle, .auth-form__label)
+- Why Used: Secondary typography color for subtitles, labels, and inactive list items.
+- When Used: Secondary text rendering.
+
+TOKEN NAME: --text-muted
+- Default Value: #64748b
+- Where Used: layout.css (.sidebar__group-title), components.css (.prompt-composer__textarea::placeholder, .plugin-card__badge)
+- Why Used: Muted typography color for placeholders, timestamps, step counters, and hints.
+- When Used: Meta text, timestamps, placeholders.
+
+TOKEN NAME: --text-disabled
+- Default Value: #475569
+- Where Used: components.css (.prompt-composer__send-btn:disabled, .files-workspace__line-numbers)
+- Why Used: Disabled state text color and line number gutter text.
+- When Used: Inactive buttons and editor line numbers.
+
+TOKEN NAME: --text-inverse
+- Default Value: #0a0d14
+- Where Used: variables.css design token
+- Why Used: Dark text color for inverted high-contrast backgrounds (light badges).
+- When Used: High-contrast button labels.
+
+----------------------------------------------------------------------------------------------------
+BRAND & ACCENT TOKENS
+----------------------------------------------------------------------------------------------------
+TOKEN NAME: --accent-cyan
+- Default Value: #38bdf8
+- Where Used: layout.css (.sidebar__item--active, .header__model-badge), components.css (.chat-welcome__icon-badge, .chat-message__execution-item, .files-workspace__tab--active, .auth-form__switch-link)
+- Why Used: Primary cyber/AI accent color representing active agent items, execution traces, and cyan badges.
+- When Used: Active indicators, agent execution steps, active tabs.
+
+TOKEN NAME: --accent-blue
+- Default Value: #3b82f6
+- Where Used: global.css (focus outline), components.css (.btn--primary, .chat-message--user .chat-message__bubble, .prompt-composer__box:focus-within, .prompt-composer__send-btn, .auth-form__input-wrapper:focus-within)
+- Why Used: Primary interaction and user message bubble color.
+- When Used: User bubbles, primary buttons, input focus rings.
+
+TOKEN NAME: --accent-indigo
+- Default Value: #6366f1
+- Where Used: layout.css (.sidebar__avatar), components.css (.marketplace__category-btn--active, .chat-welcome__card:hover)
+- Why Used: Secondary brand color for active category pills, avatars, and hover states.
+- When Used: Active category pills, brand gradients.
+
+TOKEN NAME: --accent-purple
+- Default Value: #a855f7
+- Where Used: layout.css, components.css, utils/fileIcons.jsx
+- Why Used: Accent color for image file icons and user avatar gradients.
+- When Used: Image file types and user profile avatars.
+
+TOKEN NAME: --accent-emerald
+- Default Value: #10b981
+- Where Used: Header.jsx (getStatusColor idle), utils/fileIcons.jsx (shell), components.css (.plugin-card status)
+- Why Used: Success status color and idle/ready agent status indicator.
+- When Used: Agent idle state, terminal icon, enabled plugins.
+
+TOKEN NAME: --accent-amber
+- Default Value: #f59e0b
+- Where Used: Header.jsx (getStatusColor paused), utils/fileIcons.jsx (json), components.css (.files-workspace__dirty-badge)
+- Why Used: Warning and paused status color, JSON icons, and unsaved file dots.
+- When Used: Agent paused state, dirty files, JSON file icon.
+
+TOKEN NAME: --accent-rose
+- Default Value: #f43f5e
+- Where Used: Header.jsx (getStatusColor stopped), components.css (.btn--danger, error banners)
+- Why Used: Error, stopped agent status, delete button hover, and form error alerts.
+- When Used: Agent stopped state, delete actions, auth errors.
+
+----------------------------------------------------------------------------------------------------
+STATUS COLOR TOKENS
+----------------------------------------------------------------------------------------------------
+TOKEN NAME: --status-success (Value: #10b981) - Success messages, enabled plugin pills.
+TOKEN NAME: --status-warning (Value: #f59e0b) - Warning notices, paused indicators.
+TOKEN NAME: --status-error (Value: #ef4444)   - Critical errors, failed IPC execution.
+TOKEN NAME: --status-info (Value: #0284c7)    - Informational notices.
+
+----------------------------------------------------------------------------------------------------
+DIMENSION & GEOMETRY TOKENS
+----------------------------------------------------------------------------------------------------
+TOKEN NAME: --sidebar-width: 260px          - Full expanded sidebar width.
+TOKEN NAME: --sidebar-collapsed-width: 68px - Collapsed icon-only sidebar width.
+TOKEN NAME: --header-height: 56px           - Workspace top navigation bar height.
+TOKEN NAME: --composer-max-width: 820px     - Centered maximum width for chat stream and prompt composer.
+
+----------------------------------------------------------------------------------------------------
+BORDER RADII TOKENS
+----------------------------------------------------------------------------------------------------
+TOKEN NAME: --radius-xs: 4px      - Badges, file tab close buttons, shortcuts.
+TOKEN NAME: --radius-sm: 6px      - Small buttons, input wrappers, tree items.
+TOKEN NAME: --radius-md: 10px     - Standard buttons, cards, list items.
+TOKEN NAME: --radius-lg: 14px     - Modals, large cards, welcome icon badge.
+TOKEN NAME: --radius-xl: 20px     - Prompt composer rounded box.
+TOKEN NAME: --radius-full: 9999px - Circular avatars, status dots, category pills, send button.
+
+----------------------------------------------------------------------------------------------------
+TRANSITION SPEED TOKENS
+----------------------------------------------------------------------------------------------------
+TOKEN NAME: --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1)   - Hover fills, button presses.
+TOKEN NAME: --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1) - Sidebar collapse, card transitions.
+TOKEN NAME: --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1)   - Modal slide-up, view switches.
+
+
+====================================================================================================
+SECTION 4: GLOBAL REACT CONTEXT STATE VARIABLES (Auth, Chat, Workspace)
+====================================================================================================
+These are the central global state variables managed by React Context providers. They hold the core business
+data that binds directly to backend endpoints, WebSocket streams, and Electron IPC handlers.
+
+----------------------------------------------------------------------------------------------------
+AUTH CONTEXT VARIABLES (frontend/src/context/AuthContext.jsx)
+----------------------------------------------------------------------------------------------------
+VARIABLE NAME: user
+- Type: Object | null
+- Schema: { id: string, name: string, email: string, avatar: string|null, role: string, isAuthenticated: boolean, createdAt: string, lastLogin?: string }
+- Where Used: AuthContext.jsx (Line 7), Sidebar.jsx (Line 30, Line 178-207)
+- Why Used: Stores the currently authenticated user session. Backend sends this after login/token validation.
+- When Used: Loaded on app mount from localStorage; updated when user signs in, signs up, or signs out.
+
+VARIABLE NAME: isAuthenticated
+- Type: boolean
+- Where Used: AuthContext.jsx (Line 48), Sidebar.jsx (Line 30, Line 176)
+- Why Used: Boolean flag governing whether user profile or Sign In button is displayed.
+- When Used: Evaluated on every render of sidebar footer.
+
+VARIABLE NAME: isAuthModalOpen
+- Type: boolean
+- Where Used: AuthContext.jsx (Line 8), AuthLayout.jsx (Line 8, Line 12)
+- Why Used: Controls display state of authentication modal dialog.
+- When Used: Set to true when user clicks "Sign In"; set to false when authentication succeeds or user closes modal.
+
+VARIABLE NAME: authModalMode
+- Type: string ('signin' | 'signup')
+- Where Used: AuthContext.jsx (Line 9), AuthLayout.jsx (Line 8, Line 14-20)
+- Why Used: Controls whether the auth modal displays the SignIn form or SignUp form.
+- When Used: Toggled when user clicks "Create account" or "Sign in" switch links.
+
+----------------------------------------------------------------------------------------------------
+CHAT CONTEXT VARIABLES (frontend/src/context/ChatContext.jsx)
+----------------------------------------------------------------------------------------------------
+VARIABLE NAME: conversations
+- Type: Array<Conversation>
+- Schema: Array<{ id: string, title: string, updatedAt: string, messages: Array<Message> }>
+- Where Used: ChatContext.jsx (Line 9), Sidebar.jsx (Line 22, Line 35, Line 106-171), Header.jsx
+- Why Used: Master list of all past and current agent conversations/missions.
+- When Used: Loaded on mount; updated when a new chat is created, message sent, renamed, or deleted.
+
+VARIABLE NAME: activeConversationId
+- Type: string | null
+- Where Used: ChatContext.jsx (Line 10), Sidebar.jsx (Line 23, Line 112, 138)
+- Why Used: Identifies which conversation is currently active in the chat workspace.
+- When Used: Changed when user clicks a conversation in sidebar or creates a new chat.
+
+VARIABLE NAME: activeConversation
+- Type: Conversation | null
+- Where Used: ChatContext.jsx (Line 16), ChatWorkspace.jsx (Line 8, Line 13)
+- Why Used: Resolved object of the currently selected conversation containing its messages array.
+- When Used: Passed to ChatWorkspace to render messages list.
+
+VARIABLE NAME: selectedModel
+- Type: string
+- Default Value: 'claude-3-7-sonnet'
+- Where Used: ChatContext.jsx (Line 11), Header.jsx (Line 20, Line 23, Line 131), PromptInput.jsx, chatService.js
+- Why Used: Holds the AI model ID used by the backend to dispatch tasks (e.g. 'claude-3-7-sonnet', 'deepseek-r1').
+- When Used: Selected by user in Header model modal; passed in payload when executing agent tasks.
+
+VARIABLE NAME: activeTools
+- Type: Array<string>
+- Default Value: ['fsTool', 'shellTool', 'httpTool']
+- Where Used: ChatContext.jsx (Line 12), PromptInput.jsx (Line 7, Line 102, Line 127)
+- Why Used: List of enabled tools allowlisted for agent task execution.
+- When Used: Configured via prompt composer tools popover; sent to backend in task execution payload.
+
+VARIABLE NAME: agentStatus
+- Type: string ('idle' | 'running' | 'paused' | 'stopped')
+- Default Value: 'idle'
+- Where Used: ChatContext.jsx (Line 13), Header.jsx (Line 20, Line 25-30, Line 114), PromptInput.jsx (Line 7, Line 12-13, Line 158-179)
+- Why Used: Real-time execution status of the local autonomous AI agent.
+- When Used: Updated to 'running' on prompt submission; updated via IPC events (agent:log, agent:result) or user pause/stop controls.
+
+VARIABLE NAME: searchQuery
+- Type: string
+- Where Used: ChatContext.jsx (Line 14), Sidebar.jsx (Line 27-28, Line 42-46, Line 236-237)
+- Why Used: Search filter string to filter conversations in sidebar history and search modal.
+- When Used: Updated as user types into search input.
+
+----------------------------------------------------------------------------------------------------
+WORKSPACE CONTEXT VARIABLES (frontend/src/context/WorkspaceContext.jsx)
+----------------------------------------------------------------------------------------------------
+VARIABLE NAME: currentTab
+- Type: string ('chat' | 'files' | 'marketplace')
+- Default Value: 'chat'
+- Where Used: WorkspaceContext.jsx (Line 8), Header.jsx (Line 19, Line 68-89), MainWorkspace.jsx (Line 11, Line 17-19)
+- Why Used: Controls which modular workspace view is rendered in MainWorkspace.
+- When Used: Toggled when user clicks tabs in Header or when a file is opened.
+
+VARIABLE NAME: isSidebarCollapsed
+- Type: boolean
+- Default Value: false
+- Where Used: WorkspaceContext.jsx (Line 9), Header.jsx (Line 19, Line 39-42), Sidebar.jsx (Line 20, Line 50-218)
+- Why Used: Controls whether the sidebar is full width (260px) or collapsed (68px).
+- When Used: Toggled by sidebar toggle button in Header.
+
+VARIABLE NAME: files
+- Type: Array<WorkspaceFile>
+- Schema: Array<{ id: string, name: string, path: string, type: string, content: string, updatedAt: string, isDirty: boolean }>
+- Where Used: WorkspaceContext.jsx (Line 10), FileExplorer.jsx (Line 10, Line 40-66)
+- Why Used: Master list of workspace files generated by user or autonomous agents.
+- When Used: Rendered in file explorer tree; updated on file create, edit, save, or delete.
+
+VARIABLE NAME: openFileTabs
+- Type: Array<WorkspaceFile>
+- Where Used: WorkspaceContext.jsx (Line 11), FileTabs.jsx (Line 7, Line 11-35)
+- Why Used: Array of files currently open as tabs in the editor.
+- When Used: Rendered in top tab strip of file editor.
+
+VARIABLE NAME: activeFile
+- Type: WorkspaceFile | null
+- Where Used: WorkspaceContext.jsx (Line 12), FileTabs.jsx (Line 7, Line 12), FileEditor.jsx (Line 7, Line 22-93), FileExplorer.jsx (Line 10, Line 41)
+- Why Used: Currently active file being displayed and edited in FileEditor.
+- When Used: Updated when user clicks a file tab or explorer file item.
+
+VARIABLE NAME: recentlyModified
+- Type: Array<WorkspaceFile>
+- Where Used: WorkspaceContext.jsx (Line 13), FileExplorer.jsx (Line 10, Line 76-99)
+- Why Used: Top 5 most recently modified files sorted descending by updatedAt.
+- When Used: Displayed at bottom of file explorer sidebar.
+
+
+====================================================================================================
+SECTION 5: LOCAL COMPONENT STATE & REF VARIABLES (useState & useRef)
+====================================================================================================
+These variables manage component-level lifecycles, user form inputs, dialog toggles, and direct DOM node
+references.
+
+----------------------------------------------------------------------------------------------------
+HEADER (frontend/src/components/layout/Header.jsx)
+- isModelModalOpen (boolean): Controls visibility of foundation model switcher modal dialog.
+- activeModelObj (object): Resolved object of active model from AVAILABLE_MODELS ({ id, name, provider, context, tag }).
+
+----------------------------------------------------------------------------------------------------
+SIDEBAR (frontend/src/components/layout/Sidebar.jsx)
+- isSearchModalOpen (boolean): Controls visibility of search past missions modal dialog.
+- isSettingsModalOpen (boolean): Controls visibility of desktop runtime settings modal dialog.
+- grouped (object): Return value of groupConversationsByDate(conversations) grouping chats by timeframe.
+- filteredConversations (array | null): Filtered conversation list when searchQuery is non-empty.
+
+----------------------------------------------------------------------------------------------------
+CHAT WORKSPACE (frontend/src/components/chat/ChatWorkspace.jsx)
+- inputValue (string): Active prompt text being entered in textarea composer.
+- messagesEndRef (useRef): Ref to bottom dummy div for automatic smooth scrolling upon new messages.
+- inputRef (useRef): Ref passed to prompt composer textarea to programmatic focus after suggestion clicks.
+- messages (array): Extracted messages list from activeConversation.messages.
+- isEmpty (boolean): Boolean indicating messages.length === 0 (triggers welcome screen).
+
+----------------------------------------------------------------------------------------------------
+CHAT MESSAGE (frontend/src/components/chat/ChatMessage.jsx)
+- isUser (boolean): Evaluated boolean (message.role === 'user').
+- isThinkingOpen (boolean): Toggles visibility of collapsible agent reasoning block.
+- isCopied (boolean): Temporary feedback flag when user clicks "Copy message" button (resets after 2s).
+
+----------------------------------------------------------------------------------------------------
+PROMPT INPUT COMPOSER (frontend/src/components/chat/PromptInput.jsx)
+- isToolsPopoverOpen (boolean): Toggles visibility of available agent tools popover menu.
+- attachmentName (string | null): File name of currently attached context file.
+- fileInputRef (useRef): Hidden HTML <input type="file"> reference clicked via attachment button.
+- isRunning (boolean): Shortcut flag (agentStatus === 'running').
+- isPaused (boolean): Shortcut flag (agentStatus === 'paused').
+
+----------------------------------------------------------------------------------------------------
+FILE EXPLORER (frontend/src/components/files/FileExplorer.jsx)
+- isNewFileModalOpen (boolean): Toggles visibility of new file creation modal dialog.
+- newFileName (string): Controlled input value for new file name and extension.
+
+----------------------------------------------------------------------------------------------------
+FILE EDITOR (frontend/src/components/files/FileEditor.jsx)
+- textareaRef (useRef): Direct reference to file editor textarea element.
+- lineNumbersRef (useRef): Direct reference to line numbers column element for synchronized scroll.
+- lines (array): Array of string lines split by '\n' from activeFile.content.
+- lineCount (number): Integer count of lines (lines.length).
+
+----------------------------------------------------------------------------------------------------
+MARKETPLACE (frontend/src/components/marketplace/Marketplace.jsx)
+- selectedCategory (string): Filter category for plugins (defaults to 'All').
+- searchQuery (string): Search filter query for plugin name and description.
+- plugins (array): List of plugin objects fetched from pluginService.
+- activePluginForDetails (object | null): Plugin object currently open in configuration modal.
+- filtered (array): Derived list of plugins matching both category and search filters.
+
+----------------------------------------------------------------------------------------------------
+PLUGIN DETAILS (frontend/src/components/marketplace/PluginDetails.jsx)
+- config (object): Local editable copy of plugin.config parameters before saving.
+
+----------------------------------------------------------------------------------------------------
+SIGN IN FORM (frontend/src/components/auth/SignIn.jsx)
+- email (string): Controlled email input value.
+- password (string): Controlled password input value.
+- showPassword (boolean): Toggles input type between 'password' and 'text'.
+- rememberMe (boolean): Controlled checkbox value (defaults to true).
+- error (string): Error message string displayed in alert box if authentication fails.
+- loading (boolean): Submission loading spinner/disabled state.
+
+----------------------------------------------------------------------------------------------------
+SIGN UP FORM (frontend/src/components/auth/SignUp.jsx)
+- name (string): Controlled full name input value.
+- email (string): Controlled email input value.
+- password (string): Controlled password input value.
+- confirmPassword (string): Controlled password confirmation value.
+- showPassword (boolean): Toggles password input masking.
+- error (string): Form validation and backend registration error message string.
+- loading (boolean): Account creation loading state.
+
+----------------------------------------------------------------------------------------------------
+MODAL & TOOLTIP (frontend/src/components/common/)
+- isOpen (boolean prop): Determines whether modal dialog mounts.
+- visible (boolean state in Tooltip.jsx): Determines whether floating tooltip renders on hover.
+
+
+====================================================================================================
+SECTION 6: BACKEND IPC & API COMMUNICATION VARIABLES (Channels, Payloads, Event Hooks)
+====================================================================================================
+These variables and channels are implemented in frontend/src/services/api.js, chatService.js, fileService.js,
+and context/ChatContext.jsx. They represent the exact API contract for backend developers.
+
+----------------------------------------------------------------------------------------------------
+IPC / WEBSOCKET SEND CHANNELS (Frontend -> Backend)
+----------------------------------------------------------------------------------------------------
+CHANNEL: agent:start
+- Invoked in: frontend/src/services/chatService.js (Line 178)
+- Payload Variable: content (string) — The user's mission objective or prompt text.
+- Additional Context Passed: { modelId: string, tools: Array<string> }
+- Purpose: Dispatches autonomous agent execution to Electron main process / local LLM backend.
+- When Triggered: When user clicks Send button or presses Enter in chat prompt composer.
+
+CHANNEL: agent:stop
+- Invoked in: frontend/src/context/ChatContext.jsx (Line 84)
+- Payload Variable: none
+- Purpose: Aborts the active running agent process and halts tool execution.
+- When Triggered: When user clicks Stop (Square) button during active agent run.
+
+CHANNEL: agent:pause
+- Invoked in: frontend/src/context/ChatContext.jsx (Line 89)
+- Payload Variable: none
+- Purpose: Temporarily pauses agent execution steps and waits for user resume.
+- When Triggered: When user clicks Pause button during active agent run.
+
+CHANNEL: agent:resume
+- Invoked in: frontend/src/context/ChatContext.jsx (Line 94)
+- Payload Variable: none
+- Purpose: Resumes a paused agent execution workflow.
+- When Triggered: When user clicks Play button on a paused agent.
+
+CHANNEL: file:write
+- Invoked in: frontend/src/services/fileService.js (Line 125)
+- Payload Variable: { path: string, content: string }
+  - path: Absolute or relative virtual file path (e.g. '/config/agent-config.json').
+  - content: Full text content of the file.
+- Purpose: Writes file modifications to the local operating system disk inside sandbox workspace.
+- When Triggered: When user clicks "Save File" button or presses Ctrl/Cmd+S in file editor.
+
+----------------------------------------------------------------------------------------------------
+IPC / WEBSOCKET EVENT LISTENERS (Backend -> Frontend)
+----------------------------------------------------------------------------------------------------
+CHANNEL: agent:log
+- Registered in: frontend/src/context/ChatContext.jsx (Line 20)
+- Callback Signature: (msg: string | object) => void
+- Purpose: Streams real-time execution steps, terminal commands, and tool results from backend to UI.
+- When Triggered: Dispatched by backend whenever an agent step executes.
+
+CHANNEL: agent:result
+- Registered in: frontend/src/context/ChatContext.jsx (Line 23)
+- Callback Signature: (resultPayload: object) => void
+- Purpose: Notifies UI that agent has finished execution; automatically sets agentStatus to 'idle'.
+- When Triggered: Dispatched by backend upon agent completion or final error.
+
+CHANNEL: agentic:event
+- Registered in: frontend/src/services/api.js (Line 57)
+- Detail Schema: { channel: string, data: any }
+- Purpose: Browser-compatible fallback dispatch mechanism when testing outside of Electron runtime.
+
+
+====================================================================================================
+SECTION 7: DATA MODEL PROPERTY VARIABLES (User, Conversation, Message, File, Plugin, Tool)
+====================================================================================================
+The frontend models data using standard plain JavaScript objects. These exact property names must be
+matched by backend database schemas and JSON responses.
+
+----------------------------------------------------------------------------------------------------
+1. USER MODEL (frontend/src/services/authService.js)
+----------------------------------------------------------------------------------------------------
+- user.id (string): Unique identifier (e.g. 'usr_dev_01' or 'usr_k9x2l1').
+- user.name (string): Full display name (e.g. 'Alex Developer').
+- user.email (string): User email address (e.g. 'alex@agenticharness.local').
+- user.avatar (string | null): URL or path to user avatar image.
+- user.role (string): Role description (e.g. 'AI Systems Architect', 'Engineer', 'Guest').
+- user.isAuthenticated (boolean): Authentication status flag.
+- user.createdAt (string): ISO 8601 creation timestamp.
+- user.lastLogin (string, optional): ISO 8601 last login timestamp.
+
+----------------------------------------------------------------------------------------------------
+2. CONVERSATION MODEL (frontend/src/services/chatService.js)
+----------------------------------------------------------------------------------------------------
+- conv.id (string): Unique conversation ID (e.g. 'conv-1', 'conv-1715000000').
+- conv.title (string): Human-readable mission title (e.g. 'Analyze repository architecture').
+- conv.updatedAt (string): ISO 8601 timestamp of last activity used for date grouping.
+- conv.messages (Array<Message>): Ordered chronological list of messages in this mission.
+
+----------------------------------------------------------------------------------------------------
+3. MESSAGE MODEL (frontend/src/services/chatService.js)
+----------------------------------------------------------------------------------------------------
+- message.id (string): Unique message ID (e.g. 'msg-1', 'msg-assist-1715000000').
+- message.role (string): Message sender identifier ('user' | 'assistant').
+- message.content (string): Markdown or plain text message content.
+- message.thinking (string, optional): Chain-of-thought reasoning trace (assistant only).
+- message.executionSteps (Array<string>, optional): Array of log lines describing tool execution steps.
+- message.timestamp (string): Formatted display time (e.g. '04:15 PM', 'Yesterday 4:15 PM').
+- message.isExecuting (boolean, optional): Flag indicating whether message is actively streaming.
+
+----------------------------------------------------------------------------------------------------
+4. WORKSPACE FILE MODEL (frontend/src/services/fileService.js)
+----------------------------------------------------------------------------------------------------
+- file.id (string): Unique file ID (e.g. 'f-1', 'f-1715000000').
+- file.name (string): File name with extension (e.g. 'README.md', 'agent-config.json').
+- file.path (string): Virtual workspace relative path (e.g. '/config/agent-config.json').
+- file.type (string): File type category ('markdown' | 'json' | 'javascript' | 'text' | 'html' | 'css').
+- file.content (string): Full raw file text content.
+- file.updatedAt (string): ISO 8601 timestamp of last save.
+- file.isDirty (boolean): Flag indicating whether unsaved edits exist in memory.
+
+----------------------------------------------------------------------------------------------------
+5. PLUGIN MODEL (frontend/src/services/pluginService.js)
+----------------------------------------------------------------------------------------------------
+- plugin.id (string): Unique plugin identifier (e.g. 'plugin-fs', 'plugin-shell', 'plugin-http').
+- plugin.name (string): Name of the tool or plugin (e.g. 'File System Engine').
+- plugin.category (string): Category matching PLUGIN_CATEGORIES (e.g. 'File Management', 'Developer Tools').
+- plugin.description (string): Multi-line explanation of plugin features and sandbox bounds.
+- plugin.icon (string): Key matching Lucide icon map ('FolderKanban', 'Terminal', 'Globe', 'Bot', etc.).
+- plugin.version (string): Semantic version string (e.g. '1.2.0').
+- plugin.installed (boolean): Whether plugin is installed in local environment.
+- plugin.enabled (boolean): Whether plugin is active and available to agent prompt runs.
+- plugin.author (string): Creator/maintainer name (e.g. 'Agentic Core Team').
+- plugin.config (object): Key-value parameters dictionary configurable in PluginDetails modal.
+
+----------------------------------------------------------------------------------------------------
+6. BUILT-IN TOOL MODEL (frontend/src/constants/tools.js)
+----------------------------------------------------------------------------------------------------
+- tool.id (string): Tool ID identifier ('fsTool' | 'shellTool' | 'httpTool' | 'webSearch').
+- tool.name (string): Display name (e.g. 'File System', 'Shell Terminal').
+- tool.description (string): Sandbox capability explanation.
+- tool.active (boolean): Default active flag.
+
+----------------------------------------------------------------------------------------------------
+7. MODEL SPECIFICATION (frontend/src/constants/models.js)
+----------------------------------------------------------------------------------------------------
+- model.id (string): Model identifier ('claude-3-7-sonnet' | 'deepseek-r1' | 'gpt-4o' | 'ollama-local').
+- model.name (string): Full display title (e.g. 'Claude 3.7 Sonnet', 'DeepSeek R1').
+- model.provider (string): AI provider name ('Anthropic' | 'DeepSeek' | 'OpenAI' | 'Local Machine').
+- model.context (string): Context window length ('200k', '128k', '64k').
+- model.tag (string): Feature badge ('Hybrid Reasoning', 'Reasoning Agent', 'Multimodal', 'Private Local').
+
+
+====================================================================================================
+SECTION 8: COMPONENT PROPS VARIABLES (Reusable Atomic & Modular Components)
+====================================================================================================
+Props passed into common and modular components across the application.
+
+----------------------------------------------------------------------------------------------------
+Button.jsx
+- children (ReactNode): Button label content or nested elements.
+- variant (string, default 'secondary'): 'primary' | 'secondary' | 'ghost' | 'danger'.
+- size (string, default 'md'): 'sm' | 'md'.
+- icon (LucideIcon, optional): Icon component rendered before label.
+- disabled (boolean, default false): Native disabled state.
+- onClick (function, optional): Click event handler.
+- className (string, default ''): Additional CSS class overrides.
+- type (string, default 'button'): Native HTML button type attribute ('button' | 'submit' | 'reset').
+- id (string, optional): HTML ID attribute.
+
+----------------------------------------------------------------------------------------------------
+IconButton.jsx
+- icon (LucideIcon, required): Lucide icon component to render.
+- size (number, default 18): Icon size in pixels.
+- onClick (function, optional): Click handler.
+- title (string, optional): Native hover title tooltip.
+- isActive (boolean, default false): Toggles .btn-icon--active class styling.
+- className (string, default ''): Extra CSS classes.
+- disabled (boolean, default false): Disabled button flag.
+- id (string, optional): HTML ID attribute.
+
+----------------------------------------------------------------------------------------------------
+Modal.jsx
+- isOpen (boolean, required): Controls dialog visibility.
+- onClose (function, required): Callback invoked on close button click, backdrop click, or Escape key.
+- title (string, required): Header title text.
+- children (ReactNode, required): Body content rendered inside modal.
+- footer (ReactNode, optional): Actions bar rendered at bottom of modal.
+- id (string, optional): HTML ID attribute on overlay.
+- maxWidth (string, default '520px'): CSS max-width constraint for modal card.
+
+----------------------------------------------------------------------------------------------------
+Tooltip.jsx
+- text (string, required): Floating hint text displayed on hover.
+- children (ReactNode, required): Trigger element wrapped by tooltip.
+- position (string, default 'top'): Positioning anchor ('top' | 'bottom').
+
+----------------------------------------------------------------------------------------------------
+ChatMessage.jsx
+- message (Message object, required): Message data item ({ id, role, content, thinking, executionSteps, timestamp }).
+
+----------------------------------------------------------------------------------------------------
+ChatWelcome.jsx
+- onSelectSuggestion (function, required): Callback accepting prompt string when a card is clicked.
+
+----------------------------------------------------------------------------------------------------
+PromptInput.jsx
+- inputRef (Ref, required): Ref attached to prompt textarea.
+- value (string, required): Current textarea value.
+- onChange (function, required): Callback receiving updated input string.
+- onSubmit (function, required): Callback executing mission submission.
+
+----------------------------------------------------------------------------------------------------
+PluginCard.jsx
+- plugin (Plugin object, required): Plugin item data.
+- onToggleInstall (function, required): Callback accepting plugin.id to toggle installation.
+- onToggleEnabled (function, required): Callback accepting plugin.id to toggle enabled state.
+- onOpenDetails (function, required): Callback accepting plugin object to open configuration dialog.
+
+----------------------------------------------------------------------------------------------------
+PluginDetails.jsx
+- plugin (Plugin object, nullable): Currently inspected plugin.
+- isOpen (boolean, required): Modal visibility.
+- onClose (function, required): Modal dismiss callback.
+- onSaveConfig (function, required): Callback receiving (plugin.id, updatedConfig).
+
+----------------------------------------------------------------------------------------------------
+SignIn.jsx & SignUp.jsx
+- onSwitchMode (function, required): Switches modal between signin and signup views.
+
+
+====================================================================================================
+SECTION 9: LOCAL STORAGE PERSISTENCE KEYS & VARIABLES
+====================================================================================================
+These are the exact string keys used by the frontend services in localStorage. When connecting a backend
+database, these keys can be migrated directly to REST or SQLite/Postgres tables.
+
+1. 'agentic_harness_user'
+   - File: frontend/src/services/authService.js (Line 6)
+   - Stored Value: JSON serialized User model.
+   - Purpose: Keeps user profile and session persistent across desktop restarts.
+
+2. 'agentic_harness_conversations'
+   - File: frontend/src/services/chatService.js (Line 8)
+   - Stored Value: JSON serialized array of Conversation models with nested messages.
+   - Purpose: Stores historical agent mission transcripts and execution traces.
+
+3. 'agentic_harness_active_conv'
+   - File: frontend/src/services/chatService.js (Line 9)
+   - Stored Value: String containing the id of the last active conversation.
+   - Purpose: Automatically reopens the active conversation upon application relaunch.
+
+4. 'agentic_harness_workspace_files'
+   - File: frontend/src/services/fileService.js (Line 8)
+   - Stored Value: JSON serialized array of WorkspaceFile models.
+   - Purpose: Persists virtual and sandbox workspace file tree and buffer contents.
+
+5. 'agentic_harness_plugins'
+   - File: frontend/src/services/pluginService.js (Line 6)
+   - Stored Value: JSON serialized array of Plugin models with user-configured parameters.
+   - Purpose: Stores plugin install states, enabled toggles, and customized parameters.
+
+
+====================================================================================================
+SECTION 10: BACKEND BINDING & ENDPOINT MAPPING BLUEPRINT
+====================================================================================================
+To connect this frontend to your Node.js, Python FastAPI, Go, or Electron backend, implement the following
+equivalent endpoints or IPC handlers:
+
+----------------------------------------------------------------------------------------------------
+1. AUTHENTICATION SERVICE BINDING
+----------------------------------------------------------------------------------------------------
+- POST /api/auth/signin (or IPC: 'auth:signin')
+  - Request: { email: string, password: string, rememberMe: boolean }
+  - Response: User object { id, name, email, avatar, role, isAuthenticated, lastLogin }
+  - Frontend Hook: authService.signIn() -> AuthContext.signIn()
+
+- POST /api/auth/signup (or IPC: 'auth:signup')
+  - Request: { name: string, email: string, password: string }
+  - Response: User object { id, name, email, role: 'Member', isAuthenticated, createdAt }
+  - Frontend Hook: authService.signUp() -> AuthContext.signUp()
+
+- POST /api/auth/signout (or IPC: 'auth:signout')
+  - Request: none
+  - Response: Guest User object { id: 'guest', isAuthenticated: false }
+  - Frontend Hook: authService.signOut() -> AuthContext.signOut()
+
+----------------------------------------------------------------------------------------------------
+2. AGENT RUNNER & CHAT BINDING
+----------------------------------------------------------------------------------------------------
+- POST /api/chat/conversations (or IPC: 'chat:create')
+  - Request: { title: string }
+  - Response: Conversation object { id, title, updatedAt, messages: [] }
+
+- POST /api/agent/start (or IPC: 'agent:start')
+  - Request: { conversationId: string, content: string, modelId: string, tools: Array<string> }
+  - Streaming Response / Socket Events:
+    - Event 'agent:log': { step: string, output?: string, timestamp: string }
+    - Event 'agent:result': { finalContent: string, executionSteps: Array<string>, thinking: string }
+  - Frontend Hook: chatService.sendMessage() -> ChatContext.sendMessage()
+
+- POST /api/agent/pause (or IPC: 'agent:pause')
+  - Purpose: Halts agent worker execution loop.
+  - Frontend Hook: ChatContext.pauseAgent()
+
+- POST /api/agent/resume (or IPC: 'agent:resume')
+  - Purpose: Resumes agent worker loop.
+  - Frontend Hook: ChatContext.resumeAgent()
+
+- POST /api/agent/stop (or IPC: 'agent:stop')
+  - Purpose: Forcibly kills spawned agent child process or sandbox container.
+  - Frontend Hook: ChatContext.stopAgent()
+
+----------------------------------------------------------------------------------------------------
+3. FILES & SANDBOX BINDING
+----------------------------------------------------------------------------------------------------
+- GET /api/files (or IPC: 'files:list')
+  - Response: Array<WorkspaceFile>
+  - Frontend Hook: fileService.getFiles() -> WorkspaceContext.files
+
+- POST /api/files/write (or IPC: 'file:write')
+  - Request: { path: string, content: string }
+  - Response: { success: boolean, updatedAt: string }
+  - Frontend Hook: fileService.saveFile() -> WorkspaceContext.saveActiveFile()
+
+- DELETE /api/files/:id (or IPC: 'file:delete')
+  - Request: { id: string }
+  - Response: { success: boolean }
+  - Frontend Hook: fileService.deleteFile() -> WorkspaceContext.deleteFile()
+
+----------------------------------------------------------------------------------------------------
+4. EXTENSIONS & MARKETPLACE BINDING
+----------------------------------------------------------------------------------------------------
+- GET /api/plugins (or IPC: 'plugins:list')
+  - Response: Array<Plugin>
+  - Frontend Hook: pluginService.getPlugins()
+
+- PATCH /api/plugins/:id (or IPC: 'plugin:update')
+  - Request: { installed?: boolean, enabled?: boolean, config?: object }
+  - Response: Updated Plugin object
+  - Frontend Hook: pluginService.updatePluginConfig(), toggleInstall(), toggleEnabled()
+
+====================================================================================================
+END OF VARIABLES SPECIFICATION
+====================================================================================================
+
