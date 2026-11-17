@@ -1,10 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { ArrowUp, Paperclip, Wrench, Square, Pause, Play, Check } from 'lucide-react';
+import { ArrowUp, Paperclip, Wrench, Square, Pause, Play, Check, Mic } from 'lucide-react';
 import { useChat } from '../../hooks/useChat';
+import { useWorkspace } from '../../hooks/useWorkspace';
 import { BUILTIN_TOOLS } from '../../constants/tools';
 
 export function PromptInput({ inputRef, value, onChange, onSubmit }) {
   const { agentStatus, stopAgent, pauseAgent, resumeAgent, activeTools, toggleTool } = useChat();
+  const { openLiveAudio } = useWorkspace();
   const [isToolsPopoverOpen, setIsToolsPopoverOpen] = useState(false);
   const [attachmentName, setAttachmentName] = useState(null);
   const fileInputRef = useRef(null);
@@ -87,6 +89,22 @@ export function PromptInput({ inputRef, value, onChange, onSubmit }) {
               id="prompt-attach-file-btn"
             >
               <Paperclip size={16} />
+            </button>
+
+            {/* PersonaPlex Live Audio Button */}
+            <button
+              type="button"
+              className="btn-icon"
+              onClick={openLiveAudio}
+              title="Launch PersonaPlex Live Audio (Full-Duplex Speech)"
+              style={{
+                color: 'var(--accent-cyan)',
+                backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                borderRadius: '6px'
+              }}
+              id="prompt-live-audio-btn"
+            >
+              <Mic size={15} />
             </button>
 
             {/* Tools Selector Popover Toggle */}

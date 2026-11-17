@@ -7,6 +7,7 @@ const WorkspaceContext = createContext(null);
 export function WorkspaceProvider({ children }) {
   const [currentTab, setCurrentTab] = useState(TABS.CHAT);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isLiveAudioOpen, setIsLiveAudioOpen] = useState(false);
   const [files, setFiles] = useState(() => fileService.getFiles());
   const [openFileTabs, setOpenFileTabs] = useState(() => fileService.getOpenFileTabs());
   const [activeFile, setActiveFile] = useState(() => fileService.getActiveFile());
@@ -15,6 +16,9 @@ export function WorkspaceProvider({ children }) {
   const toggleSidebar = () => {
     setIsSidebarCollapsed((prev) => !prev);
   };
+
+  const openLiveAudio = () => setIsLiveAudioOpen(true);
+  const closeLiveAudio = () => setIsLiveAudioOpen(false);
 
   const openFile = (id) => {
     const file = fileService.openFile(id);
@@ -73,6 +77,10 @@ export function WorkspaceProvider({ children }) {
         setCurrentTab,
         isSidebarCollapsed,
         toggleSidebar,
+        isLiveAudioOpen,
+        setIsLiveAudioOpen,
+        openLiveAudio,
+        closeLiveAudio,
         files,
         openFileTabs,
         activeFile,

@@ -1,5 +1,5 @@
 // Electron main process entry point
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Menu, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { registerHandlers } = require('./ipcHandlers');
@@ -7,6 +7,9 @@ const { registerHandlers } = require('./ipcHandlers');
 let mainWindow;
 
 function createWindow() {
+  // Completely remove the default application menu bar (File, Edit, View, Window, Help)
+  Menu.setApplicationMenu(null);
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 840,
@@ -14,12 +17,26 @@ function createWindow() {
     minHeight: 650,
     backgroundColor: '#0a0d14',
     title: 'Agentic Harness',
+    autoHideMenuBar: true, // Hide menu bar
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       enableRemoteModule: false
     }
+  });
+
+  // Explicitly remove menu from the window instance
+  mainWindow.removeMenu();
+  mainWindow.setMenuBarVisibility(false);
+
+  // Automatically grant microphone media permission for live audio mode
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'media') {
+      callback(true);
+      return;
+    }
+    callback(false);
   });
 
   // Resolve frontend build path: check dev server, workspace frontend/dist, packaged dist, or fallback

@@ -7,7 +7,10 @@ import {
   Sparkles,
   PanelLeftClose,
   PanelLeft,
-  Circle
+  Circle,
+  Monitor,
+  ShieldCheck,
+  Mic
 } from 'lucide-react';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { useChat } from '../../hooks/useChat';
@@ -16,7 +19,7 @@ import { AVAILABLE_MODELS } from '../../constants/models';
 import { Modal } from '../common/Modal';
 
 export function Header() {
-  const { currentTab, setCurrentTab, isSidebarCollapsed, toggleSidebar } = useWorkspace();
+  const { currentTab, setCurrentTab, isSidebarCollapsed, toggleSidebar, openLiveAudio } = useWorkspace();
   const { selectedModel, setSelectedModel, agentStatus } = useChat();
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
 
@@ -84,6 +87,28 @@ export function Header() {
 
         <button
           type="button"
+          id="tab-windows"
+          className={`header__tab-btn ${currentTab === TABS.WINDOWS ? 'header__tab-btn--active' : ''}`}
+          onClick={() => setCurrentTab(TABS.WINDOWS)}
+          title="Windows OS & Ghost Background Automation"
+        >
+          <Monitor size={15} />
+          <span>Windows OS</span>
+        </button>
+
+        <button
+          type="button"
+          id="tab-custom-tools"
+          className={`header__tab-btn ${currentTab === TABS.CUSTOM_TOOLS ? 'header__tab-btn--active' : ''}`}
+          onClick={() => setCurrentTab(TABS.CUSTOM_TOOLS)}
+          title="Custom AI Tools & Verification Gate"
+        >
+          <ShieldCheck size={15} />
+          <span>Custom Tools</span>
+        </button>
+
+        <button
+          type="button"
           id="tab-marketplace"
           className={`header__tab-btn ${currentTab === TABS.MARKETPLACE ? 'header__tab-btn--active' : ''}`}
           onClick={() => setCurrentTab(TABS.MARKETPLACE)}
@@ -93,8 +118,32 @@ export function Header() {
         </button>
       </nav>
 
-      {/* Right Section: Agent Status Pill */}
+      {/* Right Section: PersonaPlex Live Audio & Agent Status Pill */}
       <div className="header__right">
+        {/* Live Audio Button */}
+        <button
+          type="button"
+          onClick={openLiveAudio}
+          title="Launch Live Audio Mode (Gemini & ChatGPT style Liquid Orb)"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 12px',
+            borderRadius: 'var(--radius-full)',
+            background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(168, 85, 247, 0.25))',
+            border: '1px solid var(--accent-cyan)',
+            color: 'var(--text-primary)',
+            fontSize: '11px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            boxShadow: '0 0 12px rgba(56, 189, 248, 0.2)'
+          }}
+        >
+          <Mic size={13} color="var(--accent-cyan)" />
+          <span>Live Audio</span>
+        </button>
+
         <div
           style={{
             display: 'flex',
