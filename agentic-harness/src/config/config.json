@@ -1,0 +1,6 @@
+{
+  "appName": "Agentic Harness",
+  "window": { "width": 1200, "height": 800 },
+  "defaultModel": "gpt-4",
+  "memory": { "provider": "local", "path": "./data/memory" }
+}

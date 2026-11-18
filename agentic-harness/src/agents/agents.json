@@ -1,0 +1,11 @@
+{
+  "agents": [
+    {
+      "id": "research-assistant",
+      "name": "Research Assistant",
+      "systemPrompt": "You are a helpful research agent...",
+      "tools": ["webSearch", "readFile", "writeFile"],
+      "humanInTheLoop": true
+    }
+  ]
+}

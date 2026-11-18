@@ -1,0 +1,8 @@
+DeepRein - deep control and Autonomous
+Aegis- shield and protection
+BrightPilot- guidance with a friendly tone
+
+Recommeded:
+OpenAnchor or DeepAnchor - open source, Autonomous target acheiver, control over system
+
+PaperCompass - open source, Work in every condition and anywhere autonoumusly.

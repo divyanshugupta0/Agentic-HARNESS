@@ -1,0 +1,15 @@
+{
+  "appId": "com.agentic.harness",
+  "productName": "AgenticHarness",
+  "directories": {
+    "output": "dist"
+  },
+  "files": [
+    "src/**/*",
+    "public/**/*",
+    "../frontend/dist/**/*"
+  ],
+  "win": { "target": "nsis" },
+  "mac": { "target": "dmg" },
+  "linux": { "target": "AppImage" }
+}

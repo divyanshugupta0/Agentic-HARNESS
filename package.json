@@ -1,0 +1,14 @@
+{
+  "name": "agentic-harness-workspace",
+  "version": "1.0.0",
+  "description": "Agentic Harness — Autonomous Local AI Agent Platform",
+  "scripts": {
+    "dev": "npm --prefix agentic-harness run dev",
+    "start": "npm --prefix agentic-harness run dev",
+    "build": "npm --prefix agentic-harness run build",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:build": "npm --prefix frontend run build",
+    "auth:dev": "npm --prefix backend run start",
+    "auth:sqlite": "npm --prefix backend run start:sqlite"
+  }
+}
