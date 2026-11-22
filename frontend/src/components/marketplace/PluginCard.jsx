@@ -32,7 +32,7 @@ export function PluginCard({ plugin, onToggleInstall, onToggleEnabled, onOpenDet
     <div className="plugin-card" id={`plugin-card-${plugin.id}`}>
       <div className="plugin-card__header">
         <div className="plugin-card__icon-badge">
-          <IconComponent size={22} />
+          <IconComponent size={18} />
         </div>
         <span className="plugin-card__badge">{plugin.category}</span>
       </div>
@@ -48,21 +48,14 @@ export function PluginCard({ plugin, onToggleInstall, onToggleEnabled, onOpenDet
             <button
               type="button"
               onClick={() => onToggleEnabled(plugin.id)}
-              style={{
-                fontSize: '11px',
-                fontWeight: 600,
-                padding: '4px 10px',
-                borderRadius: 'var(--radius-full)',
-                backgroundColor: plugin.enabled ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-tertiary)',
-                color: plugin.enabled ? 'var(--status-success)' : 'var(--text-muted)',
-                border: plugin.enabled ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-default)',
-                cursor: 'pointer'
-              }}
+              className={`plugin-card__status-btn ${plugin.enabled ? 'plugin-card__status-btn--enabled' : 'plugin-card__status-btn--disabled'}`}
+              title={plugin.enabled ? 'Click to disable' : 'Click to enable'}
             >
-              {plugin.enabled ? 'Enabled' : 'Disabled'}
+              <span className="plugin-card__status-dot" />
+              <span>{plugin.enabled ? 'Enabled' : 'Disabled'}</span>
             </button>
           ) : (
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            <span className="plugin-card__version">
               v{plugin.version}
             </span>
           )}
@@ -91,4 +84,3 @@ export function PluginCard({ plugin, onToggleInstall, onToggleEnabled, onOpenDet
     </div>
   );
 }
-

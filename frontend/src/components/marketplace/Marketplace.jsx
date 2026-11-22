@@ -38,18 +38,18 @@ export function Marketplace() {
     <div className="marketplace" id="marketplace-container">
       {/* Header */}
       <div className="marketplace__header">
-        <div>
-          <h2 className="marketplace__heading">Explore & Agent Marketplace</h2>
+        <div className="marketplace__header-info">
+          <h2 className="marketplace__heading">Agent & Tool Marketplace</h2>
           <p className="marketplace__subtitle">
-            Extend Agentic Harness with specialized tools, agents, automation modules, and external integrations.
+            Discover and configure specialized tools, autonomous agents, and system integrations.
           </p>
         </div>
 
         <div className="marketplace__search-bar">
-          <Search size={15} color="var(--text-muted)" />
+          <Search size={15} style={{ color: 'var(--text-muted)' }} />
           <input
             type="text"
-            className="auth-form__input"
+            className="marketplace__search-input"
             placeholder="Search tools & plugins..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -57,7 +57,7 @@ export function Marketplace() {
         </div>
       </div>
 
-      {/* Category Pills */}
+      {/* Category Filter Bar */}
       <div className="marketplace__categories">
         {PLUGIN_CATEGORIES.map((category) => (
           <button
@@ -94,4 +94,3 @@ export function Marketplace() {
     </div>
   );
 }
-

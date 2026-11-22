@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Clock } from 'lucide-react';
+import { Plus, Trash2, Clock, FilePlus } from 'lucide-react';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { getFileIcon } from '../../utils/fileIcons';
 import { formatClockTime } from '../../utils/formatDate';
@@ -31,7 +31,7 @@ export function FileExplorer() {
           title="Create New File"
           id="files-create-button"
         >
-          <Plus size={16} />
+          <Plus size={15} />
         </button>
       </div>
 
@@ -45,14 +45,15 @@ export function FileExplorer() {
               className={`files-workspace__tree-item ${isActive ? 'files-workspace__tree-item--active' : ''}`}
               onClick={() => openFile(file.id)}
             >
-              {getFileIcon(file.type)}
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div className="files-workspace__tree-icon">
+                {getFileIcon(file.type)}
+              </div>
+              <span className="files-workspace__tree-name">
                 {file.name}
               </span>
               <button
                 type="button"
-                className="btn-icon"
-                style={{ width: '20px', height: '20px' }}
+                className="files-workspace__tree-delete-btn"
                 onClick={(e) => {
                   e.stopPropagation();
                   deleteFile(file.id);
@@ -67,56 +68,49 @@ export function FileExplorer() {
       </div>
 
       {/* Recently Modified Files */}
-      <div className="files-workspace__recent">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Clock size={12} color="var(--text-muted)" />
-          <span className="files-workspace__recent-title">Recently Modified</span>
+      {recentlyModified && recentlyModified.length > 0 && (
+        <div className="files-workspace__recent">
+          <div className="files-workspace__recent-header">
+            <Clock size={12} style={{ color: 'var(--text-muted)' }} />
+            <span className="files-workspace__recent-title">Recently Modified</span>
+          </div>
+          <div className="files-workspace__recent-list">
+            {recentlyModified.map((file) => (
+              <div
+                key={file.id}
+                onClick={() => openFile(file.id)}
+                className="files-workspace__recent-item"
+              >
+                <span className="files-workspace__recent-name">{file.name}</span>
+                <span className="files-workspace__recent-time">
+                  {formatClockTime(file.updatedAt)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-          {recentlyModified.map((file) => (
-            <div
-              key={file.id}
-              onClick={() => openFile(file.id)}
-              style={{
-                fontSize: '12px',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                padding: '3px 6px',
-                borderRadius: 'var(--radius-xs)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}
-            >
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {file.name}
-              </span>
-              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                {formatClockTime(file.updatedAt)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* New File Modal */}
       <Modal
         isOpen={isNewFileModalOpen}
         onClose={() => setIsNewFileModalOpen(false)}
-        title="Create New Workspace File"
-        id="files-create-modal"
+        title="Create New File"
+        id="new-file-modal"
       >
         <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div className="auth-form__group">
-            <label className="auth-form__label">File Name & Extension</label>
+            <label className="auth-form__label">File Name (with extension)</label>
             <div className="auth-form__input-wrapper">
+              <FilePlus size={16} style={{ color: 'var(--text-muted)' }} />
               <input
                 type="text"
                 className="auth-form__input"
-                placeholder="e.g. agent-runner.js, notes.md, schema.json"
+                placeholder="e.g. app.js, index.html, styles.css"
                 value={newFileName}
                 onChange={(e) => setNewFileName(e.target.value)}
                 autoFocus
+                required
               />
             </div>
           </div>
@@ -124,8 +118,8 @@ export function FileExplorer() {
             <Button variant="ghost" onClick={() => setIsNewFileModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit" disabled={!newFileName.trim()}>
-              Create
+            <Button variant="primary" type="submit">
+              Create File
             </Button>
           </div>
         </form>

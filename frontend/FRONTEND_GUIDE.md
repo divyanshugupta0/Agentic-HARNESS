@@ -127,7 +127,13 @@ frontend/
 
 ## 3. CSS Class Naming Conventions (BEM)
 
-All stylesheets adhere strictly to the **Block Element Modifier (BEM)** convention.
+All stylesheets adhere strictly to the **Block Element Modifier (BEM)** convention and utilize human-centered CSS design tokens (`variables.css`).
+
+### Design System Principles
+- **Palette**: Calm, restrained neutral backgrounds (`#f9fafb` light, `#0d0f12` dark), subtle borders (`#e5e7eb` light, `#262b35` dark), and purposeful accents (`#4f46e5` indigo / `#3b82f6` blue).
+- **Shadows**: Natural, subtle elevation without neon glows or excessive glassmorphism.
+- **Typography**: Inter for primary UI and JetBrains Mono for code, steps, and technical metadata.
+- **Micro-Interactions**: Subtle 140ms–200ms cubic-bezier transitions with full `prefers-reduced-motion` compliance.
 
 ### Standardized Classes Table
 
@@ -137,26 +143,37 @@ All stylesheets adhere strictly to the **Block Element Modifier (BEM)** conventi
 .sidebar--collapsed {}
 .sidebar__header {}
 .sidebar__brand {}
+.sidebar__logo-badge {}
 .sidebar__brand-text {}
 .sidebar__actions {}
 .sidebar__new-chat-btn {}
+.sidebar__new-chat-content {}
+.sidebar__new-chat-shortcut {}
 .sidebar__search-btn {}
+.sidebar__search-shortcut {}
 .sidebar__history {}
 .sidebar__group {}
 .sidebar__group-title {}
 .sidebar__item {}
 .sidebar__item--active {}
+.sidebar__item-indicator {}
 .sidebar__footer {}
 .sidebar__profile {}
+.sidebar__avatar {}
 
 /* Header */
 .header {}
 .header__left {}
+.header__workspace-info {}
+.header__workspace-title {}
+.header__model-badge {}
 .header__tabs {}
 .header__tab-btn {}
 .header__tab-btn--active {}
-.header__model-badge {}
 .header__right {}
+.header__status-indicator {}
+.header__status-dot {}
+.header__status-dot--pulse {}
 
 /* Chat Workspace */
 .chat-workspace {}

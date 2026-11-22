@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../common/Button';
 import { AuthProviders } from './AuthProviders';
@@ -29,22 +29,16 @@ export function SignIn({ onSwitchMode, onForgotPassword }) {
   return (
     <form className="auth-form" id="signin-form" onSubmit={handleSubmit}>
       {error && (
-        <div
-          style={{
-            padding: '8px 12px',
-            borderRadius: 'var(--radius-sm)',
-            backgroundColor: 'rgba(239, 68, 68, 0.15)',
-            color: 'var(--accent-rose)',
-            fontSize: '12px'
-          }}
-        >
-          {error}
+        <div className="auth-form__error-alert">
+          <AlertCircle size={15} style={{ flexShrink: 0 }} />
+          <span>{error}</span>
         </div>
       )}
+
       <div className="auth-form__group">
         <label className="auth-form__label">Email Address</label>
         <div className="auth-form__input-wrapper">
-          <Mail size={16} color="var(--text-muted)" />
+          <Mail size={15} style={{ color: 'var(--text-muted)' }} />
           <input
             type="email"
             className="auth-form__input"
@@ -60,7 +54,7 @@ export function SignIn({ onSwitchMode, onForgotPassword }) {
       <div className="auth-form__group">
         <label className="auth-form__label">Password</label>
         <div className="auth-form__input-wrapper">
-          <Lock size={16} color="var(--text-muted)" />
+          <Lock size={15} style={{ color: 'var(--text-muted)' }} />
           <input
             type={showPassword ? 'text' : 'password'}
             className="auth-form__input"
@@ -74,6 +68,7 @@ export function SignIn({ onSwitchMode, onForgotPassword }) {
             className="btn-icon"
             style={{ width: '24px', height: '24px' }}
             onClick={() => setShowPassword(!showPassword)}
+            title={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
@@ -97,19 +92,24 @@ export function SignIn({ onSwitchMode, onForgotPassword }) {
         type="submit"
         disabled={loading}
         id="signin-submit-btn"
-        style={{ width: '100%', marginTop: '4px' }}
+        style={{ width: '100%', marginTop: '4px', justifyContent: 'center' }}
       >
-        {loading ? 'Authenticating...' : 'Sign In to Workspace'}
+        {loading ? 'Signing in...' : 'Sign In'}
       </Button>
 
-      <AuthProviders />
-
-      <div style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>
-        Don't have an account?{' '}
-        <span className="auth-form__switch-link" onClick={onSwitchMode}>
-          Create account
-        </span>
+      <div className="auth-form__footer-switch">
+        <span>Don't have an account?</span>
+        <button
+          type="button"
+          className="auth-form__switch-link"
+          onClick={onSwitchMode}
+          disabled={loading}
+        >
+          Create Profile
+        </button>
       </div>
+
+      <AuthProviders />
     </form>
   );
 }
