@@ -46,6 +46,13 @@ frontend/
 │   │   │   ├── PluginCard.jsx  # Card displaying plugin details, enable toggle, install CTA
 │   │   │   └── PluginDetails.jsx # Configuration and permission inspection modal
 │   │   │
+│   │   ├── settings/           # Modular settings views
+│   │   │   ├── SettingsModal.jsx # Central settings modal with category switcher
+│   │   │   ├── ApiProvidersSettings.jsx # Two-pane API provider connection & verification
+│   │   │   ├── GeneralSettings.jsx      # Workspace profile and audio/scroll preferences
+│   │   │   ├── ModelsSettings.jsx       # Available models from configured providers
+│   │   │   └── PrivacySettings.jsx      # Local isolation and security overview
+│   │   │
 │   │   └── auth/               # User authentication screens
 │   │       ├── SignIn.jsx      # Email/password authentication form
 │   │       ├── SignUp.jsx      # Profile registration form
@@ -59,7 +66,11 @@ frontend/
 │   │   ├── authService.js      # Session management and mock user persistence
 │   │   ├── chatService.js      # Conversation storage, message handling, and task execution
 │   │   ├── fileService.js      # Virtual & local filesystem operations and tab management
-│   │   └── pluginService.js    # Extensible tool and plugin registry
+│   │   ├── pluginService.js    # Extensible tool and plugin registry
+│   │   └── providerService.js  # AI model providers, API credentials, dynamic model registry
+│   │
+│   ├── __tests__/              # Automated test suite
+│   │   └── appEnhancements.test.js # Provider, diagnostics, dynamic models & navigation tests
 │   │
 │   ├── hooks/                  # Custom React hooks
 │   │   ├── useAuth.js          # Direct hook for authentication state and modals
@@ -69,6 +80,7 @@ frontend/
 │   │
 │   ├── utils/                  # Shared helper functions
 │   │   ├── cn.js               # Clean CSS class name merger
+│   │   ├── diagnostics.js      # Categorized errors and secret token redaction
 │   │   ├── fileIcons.jsx       # Consolidated file icon mapping
 │   │   └── formatDate.js       # Date grouping and relative time formatters
 │   │
@@ -119,6 +131,8 @@ frontend/
 | `Marketplace` | `src/components/marketplace/Marketplace.jsx` | Category-filtered plugin and agent tools catalog | None | `pluginService` | `PluginCard`, `PluginDetails` |
 | `PluginCard` | `src/components/marketplace/PluginCard.jsx` | Presentation card for an individual tool/plugin | `plugin`, `onToggleInstall`, `onToggleEnabled`, `onOpenDetails` | Lucide icons | `Marketplace` |
 | `PluginDetails`| `src/components/marketplace/PluginDetails.jsx` | Modal dialog for editing plugin parameters | `plugin`, `isOpen`, `onClose`, `onSaveConfig` | `Modal`, `Button` | `Marketplace` |
+| `SettingsModal` | `src/components/settings/SettingsModal.jsx` | Tabbed dialog routing to specific configuration panes | `isOpen`, `onClose`, `initialCategory` | Lucide icons | `Sidebar`, `Header` |
+| `ApiProvidersSettings` | `src/components/settings/ApiProvidersSettings.jsx` | Manages AI provider connections, API keys & testing | None | `providerService`, `diagnostics` | `SettingsModal` |
 | `SignIn` | `src/components/auth/SignIn.jsx` | Authentication form with email, password & remember me | `onSwitchMode` | `useAuth` | `AuthLayout` |
 | `SignUp` | `src/components/auth/SignUp.jsx` | Account creation form with name, email & password | `onSwitchMode` | `useAuth` | `AuthLayout` |
 | `AuthLayout` | `src/components/auth/AuthLayout.jsx` | Modal dialog wrapping SignIn or SignUp | None | `useAuth`, `Modal` | `MainWorkspace` |
