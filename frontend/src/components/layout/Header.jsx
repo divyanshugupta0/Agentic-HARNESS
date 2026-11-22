@@ -7,7 +7,6 @@ import {
   Sparkles,
   PanelLeftClose,
   PanelLeft,
-  Settings,
   AlertCircle,
   Plus
 } from 'lucide-react';
@@ -119,7 +118,7 @@ export function Header() {
         </button>
       </nav>
 
-      {/* Right Section: Settings and Agent Status */}
+      {/* Right Section: Agent Status */}
       <div className="header__right">
         <div
           className="header__status-indicator"
@@ -134,17 +133,6 @@ export function Header() {
             {agentStatus}
           </span>
         </div>
-
-        <button
-          type="button"
-          className="btn-icon"
-          onClick={() => openSettings('general')}
-          title="Workspace Settings"
-          aria-label="Settings"
-          id="settings-btn"
-        >
-          <Settings size={16} />
-        </button>
       </div>
 
       {/* Model Selection Modal */}
