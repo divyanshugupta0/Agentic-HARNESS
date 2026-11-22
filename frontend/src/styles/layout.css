@@ -236,6 +236,72 @@
   display: flex;
 }
 
+/* Sidebar Settings Expandable Section */
+.sidebar__settings-nav {
+  padding: 4px var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar__settings-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.sidebar__settings-trigger:hover,
+.sidebar__settings-trigger--expanded {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar__settings-trigger-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar__settings-submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0 4px 18px;
+  animation: modalSlideUp var(--transition-fast) ease-out;
+}
+
+.sidebar__settings-subitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebar__settings-subitem:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar__settings-subitem--active {
+  background-color: var(--bg-active);
+  color: var(--accent-indigo);
+  font-weight: 500;
+}
+
 /* Sidebar Footer & User Profile */
 .sidebar__footer {
   padding: var(--space-3) var(--space-3);
@@ -365,6 +431,17 @@
   background-color: var(--bg-hover);
   border-color: var(--border-hover);
   color: var(--text-primary);
+}
+
+.header__model-badge--unconfigured {
+  border-color: rgba(245, 158, 11, 0.35);
+  background-color: rgba(245, 158, 11, 0.08);
+  color: var(--status-warning);
+}
+
+.header__model-badge--unconfigured:hover {
+  border-color: var(--status-warning);
+  background-color: rgba(245, 158, 11, 0.15);
 }
 
 /* Center Modular Navigation Tabs (Segmented Control) */

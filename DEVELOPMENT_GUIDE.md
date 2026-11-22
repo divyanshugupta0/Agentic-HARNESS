@@ -102,9 +102,9 @@ background-color: #0f1420;
 ## 5. Preventing Code Duplication
 
 Before creating a new file or helper:
-1. **Check Existing Services**: Review `src/services/` (`api.js`, `authService.js`, `chatService.js`, `fileService.js`, `pluginService.js`).
+1. **Check Existing Services**: Review `src/services/` (`api.js`, `authService.js`, `chatService.js`, `fileService.js`, `pluginService.js`, `providerService.js`).
 2. **Check Existing Hooks**: Review `src/hooks/` (`useAuth.js`, `useChat.js`, `useWorkspace.js`, `useDebounce.js`).
-3. **Check Existing Utilities**: Review `src/utils/` (`fileIcons.jsx`, `formatDate.js`, `cn.js`).
+3. **Check Existing Utilities**: Review `src/utils/` (`fileIcons.jsx`, `formatDate.js`, `cn.js`, `diagnostics.js`).
 4. **Consolidate Rather Than Copy**: If multiple components require similar logic, lift that logic into a shared hook or utility function.
 
 ---
@@ -128,17 +128,20 @@ The following files control core application security, lifecycle, and packaging:
 Before committing and pushing code:
 
 ```bash
-# 1. Verify frontend builds without errors or warnings
+# 1. Run unit/integration tests
 cd frontend
+npm test
+
+# 2. Verify frontend builds without errors or warnings
 npm run build
 
-# 2. Verify backend syntax
+# 3. Verify backend syntax
 cd ../agentic-harness
 node -c src/main/main.js
 node -c src/main/ipcHandlers.js
 node -c src/main/preload.js
 
-# 3. Test running the application
+# 4. Test running the application
 cd ..
 npm run dev
 ```

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MessageSquare,
   Folder,
@@ -7,22 +7,32 @@ import {
   Sparkles,
   PanelLeftClose,
   PanelLeft,
-  Settings
+  Settings,
+  AlertCircle,
+  Plus
 } from 'lucide-react';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { useChat } from '../../hooks/useChat';
 import { TABS } from '../../constants/navigation';
-import { AVAILABLE_MODELS } from '../../constants/models';
+import { providerService } from '../../services/providerService';
 import { Modal } from '../common/Modal';
-import { SettingsModal } from '../settings/SettingsModal';
+import { Button } from '../common/Button';
 
 export function Header() {
   const { currentTab, setCurrentTab, isSidebarCollapsed, toggleSidebar } = useWorkspace();
-  const { selectedModel, setSelectedModel, agentStatus } = useChat();
+  const { selectedModel, setSelectedModel, agentStatus, openSettings } = useChat();
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [availableModels, setAvailableModels] = useState(() => providerService.getAvailableModels());
+  const [hasProvider, setHasProvider] = useState(() => providerService.hasConfiguredProvider());
 
-  const activeModelObj = AVAILABLE_MODELS.find((m) => m.id === selectedModel) || AVAILABLE_MODELS[0];
+  useEffect(() => {
+    return providerService.subscribe(() => {
+      setAvailableModels(providerService.getAvailableModels());
+      setHasProvider(providerService.hasConfiguredProvider());
+    });
+  }, []);
+
+  const activeModelObj = availableModels.find((m) => m.id === selectedModel) || availableModels[0] || null;
 
   const getStatusColor = () => {
     if (agentStatus === 'running') return 'var(--status-info)';
@@ -48,18 +58,32 @@ export function Header() {
           <span className="header__workspace-title">Agentic Harness</span>
         </div>
 
-        {/* Model Selector Badge */}
-        <button
-          type="button"
-          className="header__model-badge"
-          onClick={() => setIsModelModalOpen(true)}
-          title="Change active foundation model"
-          id="header-model-selector"
-        >
-          <Sparkles size={13} style={{ color: 'var(--accent-indigo)' }} />
-          <span>{activeModelObj.name}</span>
-          <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
-        </button>
+        {/* Dynamic Model Selector Badge */}
+        {hasProvider && activeModelObj ? (
+          <button
+            type="button"
+            className="header__model-badge"
+            onClick={() => setIsModelModalOpen(true)}
+            title="Change active foundation model"
+            id="header-model-selector"
+          >
+            <Sparkles size={13} style={{ color: 'var(--accent-indigo)' }} />
+            <span>{activeModelObj.name}</span>
+            <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="header__model-badge header__model-badge--unconfigured"
+            onClick={() => setIsModelModalOpen(true)}
+            title="Connect an AI Provider"
+            id="header-model-selector"
+          >
+            <AlertCircle size={13} style={{ color: 'var(--status-warning)' }} />
+            <span>No Provider Connected</span>
+            <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
+          </button>
+        )}
       </div>
 
       {/* Center Modular Navigation Tabs (Segmented Control) */}
@@ -114,7 +138,7 @@ export function Header() {
         <button
           type="button"
           className="btn-icon"
-          onClick={() => setIsSettingsModalOpen(true)}
+          onClick={() => openSettings('general')}
           title="Workspace Settings"
           aria-label="Settings"
           id="settings-btn"
@@ -123,12 +147,6 @@ export function Header() {
         </button>
       </div>
 
-      <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-        id="settings-modal"
-      />
-
       {/* Model Selection Modal */}
       <Modal
         isOpen={isModelModalOpen}
@@ -136,50 +154,91 @@ export function Header() {
         title="Select AI Agent Foundation Model"
         id="model-selector-modal"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {AVAILABLE_MODELS.map((model) => (
-            <div
-              key={model.id}
+        {availableModels.length === 0 ? (
+          <div className="api-providers-settings__empty" style={{ padding: '24px 16px' }}>
+            <AlertCircle size={32} style={{ color: 'var(--accent-amber)', marginBottom: '8px' }} />
+            <p className="api-providers-settings__empty-title">
+              Your workspace is not connected to an AI provider yet.
+            </p>
+            <p className="api-providers-settings__empty-desc">
+              Connect a provider to access available models and start using Agentic Harness.
+            </p>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Plus}
               onClick={() => {
-                setSelectedModel(model.id);
                 setIsModelModalOpen(false);
+                openSettings('providers');
               }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 14px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: selectedModel === model.id ? 'var(--bg-tertiary)' : 'transparent',
-                border: selectedModel === model.id ? '1px solid var(--border-focus)' : '1px solid var(--border-default)',
-                cursor: 'pointer',
-                transition: 'all var(--transition-fast)'
-              }}
+              style={{ marginTop: '16px' }}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>
-                  {model.name}
-                </span>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                  {model.provider} • Context: {model.context}
-                </span>
-              </div>
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  padding: '3px 8px',
-                  borderRadius: 'var(--radius-full)',
-                  backgroundColor: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)',
-                  border: '1px solid var(--border-default)'
+              Add Provider
+            </Button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '4px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                Active Provider Models ({availableModels.length})
+              </span>
+              <button
+                type="button"
+                className="auth-form__switch-link"
+                style={{ fontSize: '11px' }}
+                onClick={() => {
+                  setIsModelModalOpen(false);
+                  openSettings('providers');
                 }}
               >
-                {model.tag}
-              </span>
+                Manage Providers
+              </button>
             </div>
-          ))}
-        </div>
+
+            {availableModels.map((model) => (
+              <div
+                key={model.id}
+                onClick={() => {
+                  setSelectedModel(model.id);
+                  setIsModelModalOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: selectedModel === model.id ? 'var(--bg-tertiary)' : 'transparent',
+                  border: selectedModel === model.id ? '1px solid var(--border-focus)' : '1px solid var(--border-default)',
+                  cursor: 'pointer',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>
+                    {model.name}
+                  </span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {model.provider} • Context: {model.context}
+                  </span>
+                </div>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    padding: '3px 8px',
+                    borderRadius: 'var(--radius-full)',
+                    backgroundColor: 'var(--bg-secondary)',
+                    color: 'var(--text-secondary)',
+                    border: '1px solid var(--border-default)'
+                  }}
+                >
+                  {model.tag || 'Ready'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </Modal>
     </header>
   );

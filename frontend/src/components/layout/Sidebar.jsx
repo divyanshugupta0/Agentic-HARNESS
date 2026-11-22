@@ -7,7 +7,9 @@ import {
   LogIn,
   LogOut,
   Settings,
-  Bot
+  Bot,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { useChat } from '../../hooks/useChat';
@@ -15,7 +17,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { TABS } from '../../constants/navigation';
 import { groupConversationsByDate } from '../../utils/formatDate';
 import { Modal } from '../common/Modal';
-import { SettingsModal } from '../settings/SettingsModal';
+import { SettingsModal, SETTINGS_CATEGORIES } from '../settings/SettingsModal';
 
 export function Sidebar() {
   const { isSidebarCollapsed, setCurrentTab } = useWorkspace();
@@ -26,18 +28,28 @@ export function Sidebar() {
     createNewChat,
     deleteConversation,
     searchQuery,
-    setSearchQuery
+    setSearchQuery,
+    settingsModalOpen,
+    settingsCategory,
+    openSettings,
+    closeSettings
   } = useChat();
   const { user, isAuthenticated, signOut, openSignInModal, profileError } = useAuth();
 
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
+  const [localSettingsCategory, setLocalSettingsCategory] = useState('appearance');
 
   const grouped = groupConversationsByDate(conversations);
 
   const handleNewChat = () => {
     createNewChat('New Mission');
     setCurrentTab(TABS.CHAT);
+  };
+
+  const handleOpenCategory = (catId) => {
+    setLocalSettingsCategory(catId);
+    openSettings(catId);
   };
 
   const filteredConversations = searchQuery
@@ -169,6 +181,54 @@ export function Sidebar() {
         )}
       </div>
 
+      {/* Expandable Settings Section inside Sidebar */}
+      <div className="sidebar__settings-nav" id="sidebar-settings-navigation">
+        <button
+          type="button"
+          className={`sidebar__settings-trigger ${isSettingsExpanded ? 'sidebar__settings-trigger--expanded' : ''}`}
+          onClick={() => {
+            if (isSidebarCollapsed) {
+              handleOpenCategory('general');
+            } else {
+              setIsSettingsExpanded(!isSettingsExpanded);
+            }
+          }}
+          title="Settings & Preferences"
+          id="sidebar-settings-toggle-btn"
+        >
+          <div className="sidebar__settings-trigger-left">
+            <Settings size={15} />
+            {!isSidebarCollapsed && <span>Settings</span>}
+          </div>
+          {!isSidebarCollapsed && (
+            isSettingsExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
+          )}
+        </button>
+
+        {/* Submenu revealed within sidebar */}
+        {isSettingsExpanded && !isSidebarCollapsed && (
+          <div className="sidebar__settings-submenu">
+            {SETTINGS_CATEGORIES.map((cat) => {
+              const Icon = cat.icon;
+              const isCatActive = settingsModalOpen && settingsCategory === cat.id;
+
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  className={`sidebar__settings-subitem ${isCatActive ? 'sidebar__settings-subitem--active' : ''}`}
+                  onClick={() => handleOpenCategory(cat.id)}
+                  id={`sidebar-settings-item-${cat.id}`}
+                >
+                  <Icon size={14} />
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Bottom Section: User Profile & Auth */}
       <div className="sidebar__footer" id="sidebar-user-profile">
         {isAuthenticated ? (
@@ -188,8 +248,8 @@ export function Sidebar() {
                   <button
                     type="button"
                     className="btn-icon"
-                    onClick={() => setIsSettingsModalOpen(true)}
-                    title="Settings"
+                    onClick={() => handleOpenCategory('appearance')}
+                    title="Appearance Settings"
                   >
                     <Settings size={14} />
                   </button>
@@ -268,10 +328,11 @@ export function Sidebar() {
         </div>
       </Modal>
 
-      {/* Settings Modal */}
+      {/* Controlled Settings Modal */}
       <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
+        isOpen={settingsModalOpen}
+        onClose={closeSettings}
+        initialCategory={settingsCategory || localSettingsCategory}
         id="sidebar-settings-modal"
       />
     </aside>
