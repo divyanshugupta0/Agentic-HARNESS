@@ -6,6 +6,7 @@ import {
   GoogleAuthProvider,
   OAuthProvider,
   confirmPasswordReset,
+  linkWithCredential,
   sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
@@ -24,7 +25,10 @@ const providers = {
 };
 
 providers.google.setCustomParameters({ prompt: 'select_account' });
-providers.microsoft.setCustomParameters({ prompt: 'select_account' });
+providers.microsoft.setCustomParameters({
+  prompt: 'select_account',
+  tenant: 'common'
+});
 providers.github.addScope('read:user');
 providers.github.addScope('user:email');
 
@@ -82,6 +86,24 @@ export async function firebaseSocialSignIn(providerName) {
   }
 }
 
+export async function firebaseLinkGithubWithPassword(email, password, signInError) {
+  const expectedEmail = signInError?.customData?.email;
+  if (typeof expectedEmail === 'string' && expectedEmail.toLowerCase() !== email.trim().toLowerCase()) {
+    throw new Error('The GitHub account email does not match the email in the sign-in form.');
+  }
+
+  const pendingCredential = GithubAuthProvider.credentialFromError(signInError);
+  if (!pendingCredential) {
+    throw new Error('Unable to continue GitHub account linking. Please try GitHub sign-in again.');
+  }
+
+  const auth = await initializeFirebasePersistence();
+  const { user } = await signInWithEmailAndPassword(auth, email.trim(), password);
+  const result = await linkWithCredential(user, pendingCredential);
+  await result.user.getIdToken(true);
+  return result.user;
+}
+
 export async function firebasePasswordReset(email) {
   const auth = await initializeFirebasePersistence();
   const configuredContinueUrl = import.meta.env.VITE_AUTH_CONTINUE_URL;
@@ -114,8 +136,14 @@ export function getProviderName(user) {
   return providerId;
 }
 
-export function getFirebaseAuthError(error) {
+export function getFirebaseAuthError(error, providerName) {
   const code = error?.code;
+  const providerLabels = {
+    google: 'Google',
+    github: 'GitHub',
+    microsoft: 'Microsoft'
+  };
+  const providerLabel = providerLabels[providerName] || 'OAuth';
   if (code === 'auth/configuration-not-found') {
     return 'Firebase Authentication is not enabled for this project yet. In Firebase Console, open Authentication, click Get started, enable the sign-in provider you are using under Sign-in method, save, then reload the app.';
   }
@@ -123,6 +151,9 @@ export function getFirebaseAuthError(error) {
     return 'Firebase rejected this web app configuration. Check that the API key and app ID in frontend/.env are copied from the Web app registered in this same Firebase project, then restart Vite.';
   }
   if (code === 'auth/account-exists-with-different-credential') {
+    if (providerName === 'github') {
+      return 'An account already exists for this email. Enter that account\'s email and password above, then try GitHub again to link it.';
+    }
     return 'An account already exists for this email with a different sign-in method. Sign in with that method first; accounts are not automatically linked.';
   }
   if (code === 'auth/credential-already-in-use' || code === 'auth/email-already-in-use') {
@@ -131,7 +162,11 @@ export function getFirebaseAuthError(error) {
   if (code === 'auth/popup-closed-by-user') return 'Sign-in was canceled before it finished.';
   if (code === 'auth/popup-blocked') return 'Your browser blocked the sign-in popup. Allow popups and try again.';
   if (code === 'auth/unauthorized-domain') return 'This domain is not authorized in Firebase Authentication settings.';
-  if (code === 'auth/operation-not-allowed') return 'This sign-in method is not enabled in Firebase Console.';
+  if (code === 'auth/operation-not-allowed') return `${providerLabel} sign-in is not enabled in Firebase Console.`;
+  if (code === 'auth/invalid-oauth-provider') return `${providerLabel} sign-in is not configured correctly in Firebase Console.`;
+  if (code === 'auth/invalid-oauth-client-id') return `The ${providerLabel} OAuth client ID configured in Firebase Console is invalid.`;
+  if (code === 'auth/invalid-tenant-id') return 'The Microsoft tenant ID configured in Firebase Console is invalid.';
+  if (code === 'auth/missing-or-invalid-nonce') return `${providerLabel} sign-in returned an invalid authentication response. Retry sign-in and ensure popups are allowed.`;
   if (code === 'auth/network-request-failed') return 'Network error. Check your internet connection and try again.';
   if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
     return 'The email or password is incorrect.';

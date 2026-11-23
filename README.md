@@ -107,7 +107,7 @@ npm run build
 
 The web and Electron desktop apps use Firebase Authentication for email/password and Google, Microsoft, and GitHub sign-in. The Express backend verifies Firebase ID tokens with Firebase Admin SDK and stores verified profile records in SQLite. Passwords are handled by Firebase and are never sent to or stored in the application database. The Electron main process requires a backend-verified Firebase session before allowing agent or filesystem IPC operations. See [Firebase authentication setup](docs/FIREBASE_AUTH_SETUP.md) for Firebase Console setup, environment variables, and local testing.
 
-Start the Firebase verification/profile backend with `npm run auth:sqlite` after configuring `backend/.env`. `npm run auth:dev` starts only the legacy Passport/MongoDB service.
+Start the Firebase verification/profile backend from the `backend` folder with `npm start` after configuring `backend/.env`. From the repository root, `npm run auth:sqlite` starts the same service. `npm run auth:dev` starts only the legacy Passport/MongoDB service.
 
 Do not configure frontend Firebase settings with service-account credentials or OAuth client secrets. The older Passport/MongoDB authentication service remains available for compatibility but is not used by the current desktop sign-in flow.
 
@@ -115,7 +115,7 @@ Do not configure frontend Firebase settings with service-account credentials or 
 
 The Express/Passport routes remain available for older clients. The current Electron app uses the Firebase profile API instead.
 
-Use `npm run auth:dev` only when you specifically need the legacy Passport/MongoDB service. Its setup and provider credentials are separate from Firebase; do not treat it as the current desktop authentication backend.
+Use `npm run auth:dev` only when you specifically need the legacy Passport/MongoDB service, or run `npm run start:oauth` from the `backend` folder. Its setup and provider credentials are separate from Firebase; do not treat it as the current desktop authentication backend.
 
 ---
 

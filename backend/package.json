@@ -2,11 +2,12 @@
   "name": "agentic-harness-auth",
   "version": "1.0.0",
   "private": true,
-  "description": "Express and Passport OAuth authentication service",
+  "description": "Firebase profile API with legacy Passport OAuth support",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node src/firebaseProfileServer.js",
     "start:sqlite": "node src/firebaseProfileServer.js",
+    "start:oauth": "node src/server.js",
     "test": "node --test"
   },
   "dependencies": {

@@ -2,15 +2,16 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { authService } from '../services/authService';
 import { syncFirebaseUser } from '../services/userService';
 import { isFirebaseConfigured } from '../firebase/firebaseConfig';
+import { mapFirebaseUser } from '../utils/userProfile';
 import {
   firebasePasswordReset,
+  firebaseLinkGithubWithPassword,
   firebaseSignIn,
   firebaseSignOut,
   firebaseSignUp,
   firebaseSocialSignIn,
   getFirebaseAuthError,
   getFirebaseRedirectResult,
-  getProviderName,
   initializeFirebasePersistence,
   subscribeToFirebaseAuth
 } from '../firebase/auth';
@@ -25,20 +26,6 @@ const GUEST_USER = {
   isAuthenticated: false
 };
 
-function mapFirebaseUser(firebaseUser, profile) {
-  return {
-    id: firebaseUser.uid,
-    name: profile?.fullName || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-    email: profile?.email || firebaseUser.email || '',
-    avatar: profile?.profilePicture || firebaseUser.photoURL || null,
-    role: profile?.authProvider || getProviderName(firebaseUser),
-    authProvider: profile?.authProvider || getProviderName(firebaseUser),
-    createdAt: profile?.createdAt || null,
-    emailVerified: profile?.emailVerified ?? firebaseUser.emailVerified,
-    isAuthenticated: true
-  };
-}
-
 export function AuthProvider({ children }) {
   const [authPage, setAuthPage] = useState(() => window.location.pathname);
   const [user, setUser] = useState(GUEST_USER);
@@ -47,21 +34,21 @@ export function AuthProvider({ children }) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('signin');
   const [socialAuthMessage, setSocialAuthMessage] = useState('');
-  const desktopVerifications = useRef(new Map());
+  const pendingProfileSyncs = useRef(new Map());
 
   const syncAuthenticatedUser = async (firebaseUser) => {
-    if (!window.api?.authenticateFirebase) return syncFirebaseUser(firebaseUser);
+    const pendingSync = pendingProfileSyncs.current.get(firebaseUser.uid);
+    if (pendingSync) return pendingSync;
 
-    const pendingVerification = desktopVerifications.current.get(firebaseUser.uid);
-    if (pendingVerification) return pendingVerification;
-
-    const verification = authService.authenticateFirebase(firebaseUser);
-    desktopVerifications.current.set(firebaseUser.uid, verification);
+    const profileSync = window.api?.authenticateFirebase
+      ? authService.authenticateFirebase(firebaseUser)
+      : syncFirebaseUser(firebaseUser);
+    pendingProfileSyncs.current.set(firebaseUser.uid, profileSync);
     try {
-      return await verification;
+      return await profileSync;
     } finally {
-      if (desktopVerifications.current.get(firebaseUser.uid) === verification) {
-        desktopVerifications.current.delete(firebaseUser.uid);
+      if (pendingProfileSyncs.current.get(firebaseUser.uid) === profileSync) {
+        pendingProfileSyncs.current.delete(firebaseUser.uid);
       }
     }
   };
@@ -142,11 +129,16 @@ export function AuthProvider({ children }) {
 
     initializeFirebasePersistence()
       .then(async () => {
+        let redirectResult;
         try {
-          await getFirebaseRedirectResult();
+          redirectResult = await getFirebaseRedirectResult();
         } catch (error) {
           console.error('Firebase redirect sign-in failed:', error);
-          if (active) setSocialAuthMessage(getFirebaseAuthError(error));
+          if (active) {
+            setSocialAuthMessage(getFirebaseAuthError(error));
+            setAuthModalMode('signin');
+            setIsAuthModalOpen(true);
+          }
         }
         if (!active) return;
         unsubscribe = subscribeToFirebaseAuth(handleAuthState, (error) => {
@@ -157,6 +149,7 @@ export function AuthProvider({ children }) {
             setAuthLoading(false);
           }
         });
+        if (redirectResult?.user) await handleAuthState(redirectResult.user);
       })
       .catch((error) => {
         console.error('Firebase authentication initialization failed:', error);
@@ -189,8 +182,51 @@ export function AuthProvider({ children }) {
     setSocialAuthMessage('');
   };
 
-  const startSocialSignIn = async (provider) => {
-    await firebaseSocialSignIn(provider);
+  const completeSocialSignIn = async (firebaseUser) => {
+    if (!window.api) {
+      setUser(mapFirebaseUser(firebaseUser));
+      setIsAuthModalOpen(false);
+    }
+
+    setProfileError('');
+    try {
+      const result = await syncAuthenticatedUser(firebaseUser);
+      setUser(mapFirebaseUser(firebaseUser, result.user));
+    } catch (error) {
+      if (!window.api) {
+        setProfileError(error.message || 'Signed in, but unable to load your application profile.');
+      }
+      throw error;
+    }
+    setIsAuthModalOpen(false);
+    setSocialAuthMessage('');
+  };
+
+  const startSocialSignIn = async (provider, passwordCredentials) => {
+    let credential;
+    try {
+      credential = await firebaseSocialSignIn(provider);
+    } catch (error) {
+      if (provider !== 'github'
+        || error.code !== 'auth/account-exists-with-different-credential'
+        || !passwordCredentials?.email?.trim()
+        || !passwordCredentials.password) {
+        throw error;
+      }
+
+      const firebaseUser = await firebaseLinkGithubWithPassword(
+        passwordCredentials.email,
+        passwordCredentials.password,
+        error
+      );
+      await completeSocialSignIn(firebaseUser);
+      return;
+    }
+
+    if (credential?.user) {
+      await completeSocialSignIn(credential.user);
+      return;
+    }
     setIsAuthModalOpen(false);
     setSocialAuthMessage('');
   };

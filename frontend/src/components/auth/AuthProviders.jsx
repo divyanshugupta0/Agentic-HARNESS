@@ -5,7 +5,7 @@ import { getFirebaseAuthError } from '../../firebase/auth';
 
 const providers = ['Google', 'Microsoft', 'GitHub'];
 
-export function AuthProviders() {
+export function AuthProviders({ passwordCredentials }) {
   const [message, setMessage] = useState('');
   const [loadingProvider, setLoadingProvider] = useState('');
   const { socialAuthMessage, setSocialAuthMessage, startSocialSignIn } = useAuth();
@@ -27,9 +27,9 @@ export function AuthProviders() {
               setSocialAuthMessage('');
               setLoadingProvider(provider);
               try {
-                await startSocialSignIn(provider.toLowerCase());
+                await startSocialSignIn(provider.toLowerCase(), passwordCredentials);
               } catch (error) {
-                setMessage(getFirebaseAuthError(error));
+                setMessage(getFirebaseAuthError(error, provider.toLowerCase()));
               } finally {
                 setLoadingProvider('');
               }

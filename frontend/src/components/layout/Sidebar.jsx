@@ -32,6 +32,7 @@ export function Sidebar() {
 
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState('');
 
   const grouped = groupConversationsByDate(conversations);
 
@@ -177,8 +178,15 @@ export function Sidebar() {
         {isAuthenticated ? (
           <div className="sidebar__profile">
             <div className="sidebar__avatar">
-              {user.avatar
-                ? <img src={user.avatar} alt="" className="sidebar__avatar-image" />
+              {user.avatar && user.avatar !== failedAvatarUrl
+                ? (
+                  <img
+                    src={user.avatar}
+                    alt=""
+                    className="sidebar__avatar-image"
+                    onError={() => setFailedAvatarUrl(user.avatar)}
+                  />
+                )
                 : (user.name ? user.name.charAt(0).toUpperCase() : 'U')}
             </div>
             {!isSidebarCollapsed && (

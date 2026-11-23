@@ -102,7 +102,7 @@ export function SignIn({ onSwitchMode, onForgotPassword }) {
         {loading ? 'Authenticating...' : 'Sign In to Workspace'}
       </Button>
 
-      <AuthProviders />
+      <AuthProviders passwordCredentials={{ email, password }} />
 
       <div style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>
         Don't have an account?{' '}
