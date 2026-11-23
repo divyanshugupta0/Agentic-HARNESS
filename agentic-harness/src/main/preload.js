@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('api', {
   sendMessage: (channel, data) => ipcRenderer.invoke(channel, data),
   onMessage: (channel, callback) => ipcRenderer.on(channel, (event, ...args) => callback(...args)),
   authenticateFirebase: (idToken) => ipcRenderer.invoke('auth:firebase-token', idToken),
+  localLogin: (user) => ipcRenderer.invoke('auth:local-login', user),
   getAuthUser: () => ipcRenderer.invoke('auth:session-user'),
   logout: () => ipcRenderer.invoke('auth:logout')
 });

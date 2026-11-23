@@ -7,7 +7,9 @@ import {
   LogIn,
   LogOut,
   Settings,
-  Bot
+  Bot,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { useChat } from '../../hooks/useChat';
@@ -15,7 +17,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { TABS } from '../../constants/navigation';
 import { groupConversationsByDate } from '../../utils/formatDate';
 import { Modal } from '../common/Modal';
-import { SettingsModal } from '../settings/SettingsModal';
+import { SettingsModal, SETTINGS_CATEGORIES } from '../settings/SettingsModal';
 
 export function Sidebar() {
   const { isSidebarCollapsed, setCurrentTab } = useWorkspace();
@@ -26,19 +28,29 @@ export function Sidebar() {
     createNewChat,
     deleteConversation,
     searchQuery,
-    setSearchQuery
+    setSearchQuery,
+    settingsModalOpen,
+    settingsCategory,
+    openSettings,
+    closeSettings
   } = useChat();
   const { user, isAuthenticated, signOut, openSignInModal, profileError } = useAuth();
 
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
+  const [localSettingsCategory, setLocalSettingsCategory] = useState('appearance');
   const [failedAvatarUrl, setFailedAvatarUrl] = useState('');
 
   const grouped = groupConversationsByDate(conversations);
 
   const handleNewChat = () => {
-    createNewChat('New Agent Mission');
+    createNewChat('New Mission');
     setCurrentTab(TABS.CHAT);
+  };
+
+  const handleOpenCategory = (catId) => {
+    setLocalSettingsCategory(catId);
+    openSettings(catId);
   };
 
   const filteredConversations = searchQuery
@@ -52,23 +64,11 @@ export function Sidebar() {
       className={`sidebar ${isSidebarCollapsed ? 'sidebar--collapsed' : ''}`}
       id="sidebar-container"
     >
-      {/* Top Section: Brand & Logo */}
+      {/* Top Section: Brand Lockup */}
       <div className="sidebar__header">
         <div className="sidebar__brand">
-          <div
-            style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: 'var(--radius-sm)',
-              background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              flexShrink: 0
-            }}
-          >
-            <Bot size={18} />
+          <div className="sidebar__logo-badge" title="Agentic Harness">
+            <Bot size={16} />
           </div>
           {!isSidebarCollapsed && (
             <span className="sidebar__brand-text">Agentic Harness</span>
@@ -82,11 +82,14 @@ export function Sidebar() {
           type="button"
           className="sidebar__new-chat-btn"
           onClick={handleNewChat}
-          title="Start a new chat"
+          title="Start a new chat (Ctrl+N)"
           id="sidebar-new-chat-button"
         >
-          <Plus size={16} />
-          {!isSidebarCollapsed && <span>New Mission</span>}
+          <div className="sidebar__new-chat-content">
+            <Plus size={15} />
+            {!isSidebarCollapsed && <span>New Chat</span>}
+          </div>
+          {!isSidebarCollapsed && <span className="sidebar__new-chat-shortcut">⌘N</span>}
         </button>
 
         {!isSidebarCollapsed && (
@@ -97,7 +100,7 @@ export function Sidebar() {
             id="sidebar-search-button"
           >
             <Search size={14} />
-            <span>Search missions...</span>
+            <span>Search history...</span>
             <span className="sidebar__search-shortcut">⌘K</span>
           </button>
         )}
@@ -108,21 +111,26 @@ export function Sidebar() {
         {filteredConversations ? (
           <div className="sidebar__group">
             <span className="sidebar__group-title">Search Results</span>
-            {filteredConversations.map((conv) => (
-              <div
-                key={conv.id}
-                className={`sidebar__item ${conv.id === activeConversationId ? 'sidebar__item--active' : ''}`}
-                onClick={() => {
-                  selectConversation(conv.id);
-                  setCurrentTab(TABS.CHAT);
-                }}
-              >
-                <MessageSquare size={14} />
-                {!isSidebarCollapsed && (
-                  <span className="sidebar__item-title">{conv.title}</span>
-                )}
-              </div>
-            ))}
+            {filteredConversations.map((conv) => {
+              const isActive = conv.id === activeConversationId;
+              return (
+                <div
+                  key={conv.id}
+                  className={`sidebar__item ${isActive ? 'sidebar__item--active' : ''}`}
+                  onClick={() => {
+                    selectConversation(conv.id);
+                    setCurrentTab(TABS.CHAT);
+                  }}
+                  title={conv.title}
+                >
+                  {isActive && <div className="sidebar__item-indicator" />}
+                  <MessageSquare size={14} className="sidebar__item-icon" />
+                  {!isSidebarCollapsed && (
+                    <span className="sidebar__item-title">{conv.title}</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ) : (
           Object.entries(grouped).map(([groupTitle, list]) => {
@@ -144,7 +152,8 @@ export function Sidebar() {
                       }}
                       title={conv.title}
                     >
-                      <MessageSquare size={14} />
+                      {isActive && <div className="sidebar__item-indicator" />}
+                      <MessageSquare size={14} className="sidebar__item-icon" />
                       {!isSidebarCollapsed && (
                         <>
                           <span className="sidebar__item-title">{conv.title}</span>
@@ -173,42 +182,88 @@ export function Sidebar() {
         )}
       </div>
 
+      {/* Expandable Settings Section inside Sidebar */}
+      <div className="sidebar__settings-nav" id="sidebar-settings-navigation">
+        <button
+          type="button"
+          className={`sidebar__settings-trigger ${isSettingsExpanded ? 'sidebar__settings-trigger--expanded' : ''}`}
+          onClick={() => {
+            if (isSidebarCollapsed) {
+              handleOpenCategory('general');
+            } else {
+              setIsSettingsExpanded(!isSettingsExpanded);
+            }
+          }}
+          title="Settings & Preferences"
+          id="sidebar-settings-toggle-btn"
+        >
+          <div className="sidebar__settings-trigger-left">
+            <Settings size={15} />
+            {!isSidebarCollapsed && <span>Settings</span>}
+          </div>
+          {!isSidebarCollapsed && (
+            isSettingsExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
+          )}
+        </button>
+
+        {/* Submenu revealed within sidebar */}
+        {isSettingsExpanded && !isSidebarCollapsed && (
+          <div className="sidebar__settings-submenu">
+            {SETTINGS_CATEGORIES.map((cat) => {
+              const Icon = cat.icon;
+              const isCatActive = settingsModalOpen && settingsCategory === cat.id;
+
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  className={`sidebar__settings-subitem ${isCatActive ? 'sidebar__settings-subitem--active' : ''}`}
+                  onClick={() => handleOpenCategory(cat.id)}
+                  id={`sidebar-settings-item-${cat.id}`}
+                >
+                  <Icon size={14} />
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Bottom Section: User Profile & Auth */}
       <div className="sidebar__footer" id="sidebar-user-profile">
         {isAuthenticated ? (
           <div className="sidebar__profile">
             <div className="sidebar__avatar">
-              {user.avatar && user.avatar !== failedAvatarUrl
-                ? (
+              {user.avatar && user.avatar !== failedAvatarUrl ? (
                   <img
                     src={user.avatar}
                     alt=""
                     className="sidebar__avatar-image"
                     onError={() => setFailedAvatarUrl(user.avatar)}
                   />
-                )
-                : (user.name ? user.name.charAt(0).toUpperCase() : 'U')}
+                ) : (user.name ? user.name.charAt(0).toUpperCase() : 'U')}
             </div>
             {!isSidebarCollapsed && (
               <>
                 <div className="sidebar__profile-info">
                   <span className="sidebar__username">{user.name}</span>
-                  <span className="sidebar__user-status">{user.email}</span>
-                  <span className="sidebar__user-status">{user.authProvider || user.role}</span>
+                  {user.email && <span className="sidebar__user-status">{user.email}</span>}
+                  <span className="sidebar__user-status">{user.authProvider || user.role || 'Local Developer'}</span>
                   {user.createdAt && (
                     <span className="sidebar__user-status">
                       Joined {new Date(user.createdAt).toLocaleDateString()}
                     </span>
                   )}
                 </div>
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '2px' }}>
                   <button
                     type="button"
                     className="btn-icon"
-                    onClick={() => setIsSettingsModalOpen(true)}
-                    title="Settings"
+                    onClick={() => handleOpenCategory('appearance')}
+                    title="Appearance Settings"
                   >
-                    <Settings size={15} />
+                    <Settings size={14} />
                   </button>
                   <button
                     type="button"
@@ -216,7 +271,7 @@ export function Sidebar() {
                     onClick={signOut}
                     title="Sign Out"
                   >
-                    <LogOut size={15} />
+                    <LogOut size={14} />
                   </button>
                 </div>
               </>
@@ -226,7 +281,7 @@ export function Sidebar() {
           <button
             type="button"
             className="btn btn--primary"
-            style={{ width: '100%' }}
+            style={{ width: '100%', justifyContent: 'center' }}
             onClick={openSignInModal}
             id="sidebar-signin-button"
           >
@@ -243,7 +298,7 @@ export function Sidebar() {
       <Modal
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}
-        title="Search Past Missions"
+        title="Search Past Conversations"
         id="sidebar-search-modal"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -274,7 +329,8 @@ export function Sidebar() {
                     borderRadius: 'var(--radius-md)',
                     backgroundColor: 'var(--bg-tertiary)',
                     cursor: 'pointer',
-                    fontSize: '13px'
+                    fontSize: '13px',
+                    transition: 'background-color 0.15s'
                   }}
                 >
                   {conv.title}
@@ -284,10 +340,11 @@ export function Sidebar() {
         </div>
       </Modal>
 
-      {/* Settings Modal */}
+      {/* Controlled Settings Modal */}
       <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
+        isOpen={settingsModalOpen}
+        onClose={closeSettings}
+        initialCategory={settingsCategory || localSettingsCategory}
         id="sidebar-settings-modal"
       />
     </aside>

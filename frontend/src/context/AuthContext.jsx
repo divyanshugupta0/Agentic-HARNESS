@@ -17,6 +17,8 @@ import {
 } from '../firebase/auth';
 
 const AuthContext = createContext(null);
+const STORAGE_KEY = 'agentic_harness_user';
+
 const GUEST_USER = {
   id: 'guest',
   name: 'Guest User',
@@ -26,9 +28,22 @@ const GUEST_USER = {
   isAuthenticated: false
 };
 
+function getInitialUser() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.isAuthenticated) return parsed;
+    }
+  } catch (error) {
+    console.error('Failed to restore the saved user profile:', error);
+  }
+  return GUEST_USER;
+}
+
 export function AuthProvider({ children }) {
   const [authPage, setAuthPage] = useState(() => window.location.pathname);
-  const [user, setUser] = useState(GUEST_USER);
+  const [user, setUser] = useState(getInitialUser);
   const [authLoading, setAuthLoading] = useState(true);
   const [profileError, setProfileError] = useState('');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -68,10 +83,14 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
+    // If Firebase is not configured, run in Local Desktop Workspace mode
     if (!isFirebaseConfigured) {
-      if (window.api) {
-        setProfileError('Firebase is not configured. Add the VITE_FIREBASE_* values to frontend/.env and rebuild the desktop app.');
-        setIsAuthModalOpen(true);
+      const savedUser = getInitialUser();
+      if (savedUser.isAuthenticated) {
+        setUser(savedUser);
+        if (window.api?.sendMessage) {
+          window.api.sendMessage('auth:local-login', savedUser);
+        }
       }
       setAuthLoading(false);
       return undefined;
@@ -86,6 +105,7 @@ export function AuthProvider({ children }) {
       if (!firebaseUser) {
         currentUid = null;
         setUser(GUEST_USER);
+        localStorage.removeItem(STORAGE_KEY);
         if (window.api) {
           try {
             await authService.signOut();
@@ -93,33 +113,27 @@ export function AuthProvider({ children }) {
             console.error('Failed to clear the verified desktop session:', error);
             if (active) setProfileError(error.message || 'Unable to clear the desktop sign-in session.');
           }
-          setIsAuthModalOpen(true);
         }
         setAuthLoading(false);
         return;
       }
 
       currentUid = firebaseUser.uid;
-      if (window.api) {
-        setUser(GUEST_USER);
-        setIsAuthModalOpen(true);
-      } else {
+      if (!window.api) {
         setUser(mapFirebaseUser(firebaseUser));
         setIsAuthModalOpen(false);
       }
       try {
         const result = await syncAuthenticatedUser(firebaseUser);
         if (active && currentUid === firebaseUser.uid) {
-          setUser(mapFirebaseUser(firebaseUser, result.user));
+          const mapped = mapFirebaseUser(firebaseUser, result.user);
+          setUser(mapped);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
           setIsAuthModalOpen(false);
         }
       } catch (error) {
         console.error('Failed to synchronize Firebase profile:', error);
         if (active && currentUid === firebaseUser.uid) {
-          if (window.api) {
-            setUser(GUEST_USER);
-            setIsAuthModalOpen(true);
-          }
           setProfileError(error.message || 'Signed in, but unable to load your application profile.');
         }
       } finally {
@@ -145,7 +159,6 @@ export function AuthProvider({ children }) {
           console.error('Firebase authentication state failed:', error);
           if (active) {
             setProfileError(getFirebaseAuthError(error));
-            if (window.api) setIsAuthModalOpen(true);
             setAuthLoading(false);
           }
         });
@@ -155,7 +168,6 @@ export function AuthProvider({ children }) {
         console.error('Firebase authentication initialization failed:', error);
         if (active) {
           setProfileError(getFirebaseAuthError(error));
-          if (window.api) setIsAuthModalOpen(true);
           setAuthLoading(false);
         }
       });
@@ -167,19 +179,67 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signIn = async (credentials) => {
+    // If Firebase is not configured, authenticate locally
+    if (!isFirebaseConfigured) {
+      const localUser = {
+        id: 'usr_local_' + Math.random().toString(36).substring(2, 9),
+        name: credentials.email.split('@')[0] || 'Developer',
+        email: credentials.email,
+        avatar: null,
+        role: 'Local Developer',
+        isAuthenticated: true
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(localUser));
+      if (window.api?.sendMessage) {
+        await window.api.sendMessage('auth:local-login', localUser);
+      }
+      setUser(localUser);
+      setIsAuthModalOpen(false);
+      setProfileError('');
+      setSocialAuthMessage('');
+      return localUser;
+    }
+
     const { user: firebaseUser } = await firebaseSignIn(credentials.email, credentials.password);
     const result = await syncAuthenticatedUser(firebaseUser);
-    setUser(mapFirebaseUser(firebaseUser, result.user));
+    const mapped = mapFirebaseUser(firebaseUser, result.user);
+    setUser(mapped);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
     setIsAuthModalOpen(false);
     setSocialAuthMessage('');
+    return mapped;
   };
 
   const signUp = async (data) => {
+    // If Firebase is not configured, create a local desktop profile
+    if (!isFirebaseConfigured) {
+      const localUser = {
+        id: 'usr_local_' + Math.random().toString(36).substring(2, 9),
+        name: data.name || data.email.split('@')[0] || 'Developer',
+        email: data.email,
+        avatar: null,
+        role: 'Local Developer',
+        isAuthenticated: true
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(localUser));
+      if (window.api?.sendMessage) {
+        await window.api.sendMessage('auth:local-login', localUser);
+      }
+      setUser(localUser);
+      setIsAuthModalOpen(false);
+      setProfileError('');
+      setSocialAuthMessage('');
+      return localUser;
+    }
+
     const { user: firebaseUser } = await firebaseSignUp(data.name, data.email, data.password);
     const result = await syncAuthenticatedUser(firebaseUser);
-    setUser(mapFirebaseUser(firebaseUser, result.user));
+    const mapped = mapFirebaseUser(firebaseUser, result.user);
+    setUser(mapped);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
     setIsAuthModalOpen(false);
     setSocialAuthMessage('');
+    return mapped;
   };
 
   const completeSocialSignIn = async (firebaseUser) => {
@@ -203,6 +263,26 @@ export function AuthProvider({ children }) {
   };
 
   const startSocialSignIn = async (provider, passwordCredentials) => {
+    if (!isFirebaseConfigured) {
+      const localUser = {
+        id: 'usr_' + provider.toLowerCase() + '_' + Math.random().toString(36).substring(2, 9),
+        name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} User`,
+        email: `${provider.toLowerCase()}@local.desktop`,
+        avatar: null,
+        role: `${provider} Developer`,
+        isAuthenticated: true
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(localUser));
+      if (window.api?.sendMessage) {
+        await window.api.sendMessage('auth:local-login', localUser);
+      }
+      setUser(localUser);
+      setIsAuthModalOpen(false);
+      setProfileError('');
+      setSocialAuthMessage('');
+      return;
+    }
+
     let credential;
     try {
       credential = await firebaseSocialSignIn(provider);
@@ -232,14 +312,17 @@ export function AuthProvider({ children }) {
   };
 
   const sendPasswordReset = async (email) => {
+    if (!isFirebaseConfigured) {
+      throw new Error('Password reset is unavailable in local offline mode.');
+    }
     await firebasePasswordReset(email);
   };
 
   const signOut = async () => {
-    await firebaseSignOut();
-    if (window.api) await authService.signOut();
+    if (isFirebaseConfigured) await firebaseSignOut();
+    localStorage.removeItem(STORAGE_KEY);
+    if (window.api?.logout) await window.api.logout();
     setUser(GUEST_USER);
-    if (window.api) setIsAuthModalOpen(true);
   };
 
   const openSignInModal = () => {
