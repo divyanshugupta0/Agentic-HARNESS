@@ -47,6 +47,22 @@ test('falls back to the stored profile when provider details are absent', () => 
   assert.equal(user.isAuthenticated, true);
 });
 
+test('uses the provider used for this sign-in when multiple providers are linked', () => {
+  const user = mapFirebaseUser({
+    uid: 'user-4',
+    email: 'linked@example.com',
+    displayName: 'Linked User',
+    emailVerified: true,
+    providerData: [
+      { providerId: 'google.com' },
+      { providerId: 'github.com' }
+    ]
+  }, undefined, 'github.com');
+
+  assert.equal(user.role, 'github.com');
+  assert.equal(user.authProvider, 'github.com');
+});
+
 test('uses the saved Firebase display name for email and password accounts', () => {
   const user = mapFirebaseUser({
     uid: 'user-3',

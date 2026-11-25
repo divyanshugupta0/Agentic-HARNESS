@@ -9,8 +9,7 @@ export function AuthLayout() {
     isAuthModalOpen,
     closeAuthModal,
     authModalMode,
-    setAuthModalMode,
-    navigateAuthPage
+    setAuthModalMode
   } = useAuth();
 
   return (
@@ -21,10 +20,7 @@ export function AuthLayout() {
       id="auth-modal"
     >
       {authModalMode === 'signin' ? (
-        <SignIn
-          onSwitchMode={() => setAuthModalMode('signup')}
-          onForgotPassword={() => navigateAuthPage('/forgot-password')}
-        />
+        <SignIn onSwitchMode={() => setAuthModalMode('signup')} />
       ) : (
         <SignUp onSwitchMode={() => setAuthModalMode('signin')} />
       )}

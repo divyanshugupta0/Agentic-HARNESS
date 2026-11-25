@@ -11,17 +11,13 @@ async function request(path, user, options = {}) {
   try {
     response = await fetch(`${USER_API_URL}${path}`, {
       ...options,
-      signal: AbortSignal.timeout(20000),
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${idToken}`,
         ...options.headers
       }
     });
-  } catch (error) {
-    if (error?.name === 'TimeoutError') {
-      throw new Error('The profile service timed out. You are signed in, but your profile could not be synchronized.');
-    }
+  } catch {
     throw new Error('The profile service is unavailable. Start the backend and check VITE_USER_API_URL.');
   }
   const result = await response.json().catch(() => ({}));

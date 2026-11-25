@@ -8,7 +8,6 @@
     "build": "npm --prefix agentic-harness run build",
     "frontend:dev": "npm --prefix frontend run dev",
     "frontend:build": "npm --prefix frontend run build",
-    "auth:dev": "npm --prefix backend run start:oauth",
-    "auth:sqlite": "npm --prefix backend run start:sqlite"
+    "auth:dev": "npm --prefix backend run start"
   }
 }

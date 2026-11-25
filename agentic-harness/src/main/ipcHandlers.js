@@ -1,99 +1,68 @@
 // IPC handlers for main process
-const { ipcMain, session } = require('electron');
+const { ipcMain, session, shell } = require('electron');
 const { BaseAgent } = require('../agents/baseAgent');
 const { MemoryStore } = require('../memory/memoryStore');
 const { readFile, writeFile } = require('../tools/fsTool');
+const { createSocialLoginHandler } = require('./socialLogin');
+const { createAuthenticatedSessionVerifier } = require('./authSession');
 
 let activeRun = null;
-let authenticatedUser = null;
-let authenticatedUntil = 0;
-let authExpirationTimer = null;
-let authGeneration = 0;
 
 function registerHandlers() {
-  const profileApiUrl = (
-    process.env.USER_API_URL
-    || process.env.VITE_USER_API_URL
-    || process.env.AUTH_API_URL
-    || 'http://localhost:3001'
-  ).replace(/\/$/, '');
+  const authApiUrl = process.env.AUTH_API_URL || process.env.VITE_AUTH_API_URL || 'http://localhost:3001';
   const authFetch = session.defaultSession.fetch.bind(session.defaultSession);
-  ipcMain.handle('auth:firebase-token', async (_event, idToken) => {
-    const generation = ++authGeneration;
-    if (typeof idToken !== 'string' || idToken.length < 1 || idToken.length > 8192) {
-      clearAuthenticatedSession();
-      throw new Error('A valid Firebase ID token is required.');
+  const requireAuthenticatedSession = createAuthenticatedSessionVerifier({
+    apiUrl: authApiUrl,
+    fetchImpl: authFetch
+  });
+  const openSocialLogin = createSocialLoginHandler({
+    apiUrl: authApiUrl,
+    fetchImpl: authFetch,
+    openExternal: (url) => shell.openExternal(url)
+  });
+  ipcMain.handle('auth:open-social-login', (_event, provider) => openSocialLogin(provider));
+  ipcMain.handle('auth:credential', async (_event, { action, name, email, password } = {}) => {
+    if (!['login', 'signup'].includes(action)) {
+      throw new Error('Unsupported authentication action');
     }
+    const response = await authFetch(`${authApiUrl}/auth/${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name, email, password }),
+      signal: AbortSignal.timeout(10000)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.error || 'Authentication failed');
+    }
+    return result;
+  });
+  ipcMain.handle('auth:session-user', async () => {
+    const response = await authFetch(`${authApiUrl}/auth/user`, {
+      headers: { Accept: 'application/json' },
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    if (response.status === 401) return null;
+    if (!response.ok) throw new Error('Unable to restore the desktop authentication session');
+    return response.json();
+  });
+  ipcMain.handle('auth:logout', async () => {
     try {
-      const response = await authFetch(`${profileApiUrl}/api/auth/sync-user`, {
+      const response = await authFetch(`${authApiUrl}/auth/logout`, {
         method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${idToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: '{}',
-        signal: AbortSignal.timeout(10000)
+        credentials: 'include'
       });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(result.error || 'Firebase token verification failed.');
-      }
-      if (!result.user || typeof result.user.firebaseUid !== 'string') {
-        throw new Error('The profile service returned an invalid authenticated user.');
-      }
-      if (generation !== authGeneration) {
-        throw new Error('The Firebase authentication state changed during verification.');
-      }
-
-      const tokenPayload = idToken.split('.')[1];
-      let expiration;
-      try {
-        expiration = JSON.parse(Buffer.from(tokenPayload, 'base64url').toString('utf8')).exp * 1000;
-      } catch {
-        throw new Error('The verified Firebase ID token has an invalid expiration.');
-      }
-      if (!Number.isFinite(expiration) || expiration <= Date.now()) {
-        throw new Error('The verified Firebase ID token has expired.');
-      }
-
-      clearAuthenticatedSession({
-        stopActiveRun: authenticatedUser?.firebaseUid !== result.user.firebaseUid
-      });
-      authenticatedUser = result.user;
-      authenticatedUntil = expiration;
-      authExpirationTimer = setTimeout(clearAuthenticatedSession, expiration - Date.now());
-      return authenticatedUser;
-    } catch (error) {
-      if (generation === authGeneration) clearAuthenticatedSession();
-      throw error;
+      if (!response.ok) throw new Error('Unable to end the desktop authentication session');
+    } finally {
+      stopActiveRun();
     }
-  });
-  ipcMain.handle('auth:session-user', () => {
-    if (authenticatedUntil <= Date.now()) clearAuthenticatedSession();
-    return authenticatedUser;
-  });
-  ipcMain.handle('auth:local-login', async (_event, localUser) => {
-    authenticatedUser = {
-      firebaseUid: localUser?.id || 'local-developer',
-      fullName: localUser?.name || 'Local Developer',
-      email: localUser?.email || 'developer@local.workspace',
-      role: localUser?.role || 'Developer'
-    };
-    authenticatedUntil = Date.now() + 365 * 24 * 60 * 60 * 1000;
-    return authenticatedUser;
-  });
-  ipcMain.handle('auth:logout', () => {
-    authGeneration++;
-    clearAuthenticatedSession();
   });
 
   ipcMain.handle('agent:start', async (event, goal) => {
-    requireAuthenticatedUser();
-    if (activeRun) {
-      activeRun.stopped = true;
-      if (activeRun.timer) clearTimeout(activeRun.timer);
-    }
+    await requireAuthenticatedSession();
+    stopActiveRun();
 
     const memory = new MemoryStore();
     memory.addMessage('user', goal);
@@ -157,11 +126,9 @@ function registerHandlers() {
   });
 
   ipcMain.handle('agent:stop', async (event) => {
-    requireAuthenticatedUser();
+    await requireAuthenticatedSession();
     if (activeRun) {
-      activeRun.stopped = true;
-      if (activeRun.timer) clearTimeout(activeRun.timer);
-      activeRun.agent.stop();
+      stopActiveRun();
       try {
         event.sender.send('agent:log', '🛑 Agent execution stopped by supervisor.');
       } catch (e) {}
@@ -171,7 +138,7 @@ function registerHandlers() {
   });
 
   ipcMain.handle('agent:pause', async (event) => {
-    requireAuthenticatedUser();
+    await requireAuthenticatedSession();
     if (activeRun) {
       activeRun.paused = true;
       if (activeRun.timer) clearTimeout(activeRun.timer);
@@ -184,7 +151,7 @@ function registerHandlers() {
   });
 
   ipcMain.handle('agent:resume', async (event) => {
-    requireAuthenticatedUser();
+    await requireAuthenticatedSession();
     if (activeRun && activeRun.paused) {
       activeRun.paused = false;
       activeRun.agent.resume();
@@ -197,7 +164,7 @@ function registerHandlers() {
 
   // Secure File System IPC handlers
   ipcMain.handle('file:read', async (event, filePath) => {
-    requireAuthenticatedUser();
+    await requireAuthenticatedSession();
     try {
       const content = await readFile(filePath);
       return { success: true, content };
@@ -207,7 +174,7 @@ function registerHandlers() {
   });
 
   ipcMain.handle('file:write', async (event, { path: filePath, content }) => {
-    requireAuthenticatedUser();
+    await requireAuthenticatedSession();
     try {
       await writeFile(filePath, content);
       return { success: true };
@@ -217,30 +184,12 @@ function registerHandlers() {
   });
 }
 
-function requireAuthenticatedUser() {
-  if (!authenticatedUser || authenticatedUntil <= Date.now()) {
-    authenticatedUser = {
-      firebaseUid: 'local-developer',
-      fullName: 'Local Developer',
-      email: 'developer@local.workspace',
-      role: 'Developer'
-    };
-    authenticatedUntil = Date.now() + 365 * 24 * 60 * 60 * 1000;
-  }
-  return authenticatedUser;
-}
-
-function clearAuthenticatedSession({ stopActiveRun = true } = {}) {
-  authenticatedUser = null;
-  authenticatedUntil = 0;
-  if (authExpirationTimer) clearTimeout(authExpirationTimer);
-  authExpirationTimer = null;
-  if (stopActiveRun && activeRun) {
-    activeRun.stopped = true;
-    if (activeRun.timer) clearTimeout(activeRun.timer);
-    activeRun.agent.stop();
-    activeRun = null;
-  }
+function stopActiveRun() {
+  if (!activeRun) return;
+  activeRun.stopped = true;
+  if (activeRun.timer) clearTimeout(activeRun.timer);
+  activeRun.agent.stop();
+  activeRun = null;
 }
 
 module.exports = { registerHandlers };

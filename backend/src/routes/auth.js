@@ -52,7 +52,7 @@ function createAuthRouter(passport, config, users, desktopAuth) {
         return res.status(201).json(safeUser(user));
       });
     } catch (error) {
-      if (error.code === 11000) {
+      if (error.code === 'USER_EMAIL_TAKEN') {
         return res.status(409).json({ error: 'An account with that email already exists' });
       }
       return next(error);

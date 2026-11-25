@@ -3,7 +3,6 @@ import { Eye, EyeOff, Lock, Mail, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../common/Button';
 import { AuthProviders } from './AuthProviders';
-import { getFirebaseAuthError } from '../../firebase/auth';
 
 export function SignUp({ onSwitchMode }) {
   const { signUp } = useAuth();
@@ -33,7 +32,7 @@ export function SignUp({ onSwitchMode }) {
     try {
       await signUp({ name, email, password });
     } catch (err) {
-      setError(getFirebaseAuthError(err));
+      setError(err.message || 'Failed to create account');
     } finally {
       setLoading(false);
     }

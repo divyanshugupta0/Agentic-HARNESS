@@ -1,67 +1,47 @@
 const path = require('node:path');
+const fs = require('node:fs');
 const dotenv = require('dotenv');
-const MongoStore = require('connect-mongo');
-const { MongoClient } = require('mongodb');
+const Database = require('better-sqlite3');
 const passport = require('passport');
 const { createApp } = require('./app');
 const { loadConfig } = require('./config');
 const { createDesktopAuthStore } = require('./desktopAuth');
 const { configurePassport } = require('./passport');
+const { SQLiteSessionStore } = require('./sqliteSessionStore');
 const { createUserRepository } = require('./users');
-const { createFirebaseAdmin } = require('./firebaseAdmin');
-const { createProfileDatabase } = require('./profileDatabase');
 
 dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
 
 const config = loadConfig();
-const mongoClient = new MongoClient(config.mongoUri);
-const firebaseAdmin = createFirebaseAdmin();
-const profileDatabase = createProfileDatabase();
 
 async function start() {
-  await mongoClient.connect();
-  const database = mongoClient.db();
-  const users = createUserRepository(database.collection('users'));
-  const desktopAuth = createDesktopAuthStore(database.collection('desktop_auth_handoffs'));
+  fs.mkdirSync(path.dirname(config.databasePath), { recursive: true });
+  const database = new Database(config.databasePath);
+  database.pragma('journal_mode = WAL');
+  database.pragma('foreign_keys = ON');
+  const users = createUserRepository(database);
+  const desktopAuth = createDesktopAuthStore(database);
   await users.initialize();
-  await database.collection('desktop_auth_handoffs').createIndex(
-    { expiresAt: 1 },
-    { expireAfterSeconds: 0 }
-  );
+  await desktopAuth.initialize();
   configurePassport(passport, config, users);
-  const sessionStore = MongoStore.create({
-    clientPromise: Promise.resolve(mongoClient),
-    dbName: database.databaseName,
-    collectionName: 'sessions',
-    ttl: 8 * 60 * 60
-  });
-  const app = createApp({
-    config,
-    passport,
-    sessionStore,
-    users,
-    desktopAuth,
-    firebaseAdmin,
-    profileDatabase
-  });
+  const sessionStore = new SQLiteSessionStore(database);
+  const app = createApp({ config, passport, sessionStore, users, desktopAuth });
 
   const server = app.listen(config.port, () => {
     console.log(`Authentication service listening on port ${config.port}`);
   });
-  const shutdown = async () => {
+  const shutdown = () => {
     server.close(async () => {
-      await mongoClient.close();
-      profileDatabase.close();
+      database.close();
       process.exit(0);
     });
   };
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
+  return database;
 }
 
-start().catch(async (error) => {
+start().catch((error) => {
   console.error('Authentication service failed to start:', error);
-  await mongoClient.close();
-  profileDatabase.close();
   process.exitCode = 1;
 });

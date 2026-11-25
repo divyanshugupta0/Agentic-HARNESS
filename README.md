@@ -103,19 +103,22 @@ npm run frontend:dev
 npm run build
 ```
 
-## Firebase Authentication
+## Email/Password and Social Sign-In
 
-The web and Electron desktop apps use Firebase Authentication for email/password and Google, Microsoft, and GitHub sign-in. The Express backend verifies Firebase ID tokens with Firebase Admin SDK and stores verified profile records in SQLite. Passwords are handled by Firebase and are never sent to or stored in the application database. The Electron main process requires a backend-verified Firebase session before allowing agent or filesystem IPC operations. See [Firebase authentication setup](docs/FIREBASE_AUTH_SETUP.md) for Firebase Console setup, environment variables, and local testing.
+The web frontend and Electron desktop app use the Express authentication service in `backend/`. Email/password credentials are handled by this service; social sign-in uses Google, GitHub, or Microsoft OAuth.
 
-Start the Firebase verification/profile backend from the `backend` folder with `npm start` after configuring `backend/.env`. From the repository root, `npm run auth:sqlite` starts the same service. `npm run auth:dev` starts only the legacy Passport/MongoDB service.
+1. Install the backend dependencies with `npm --prefix backend install`.
+2. Copy `backend/.env.example` to `backend/.env`. Set a random `SESSION_SECRET` of at least 32 characters. The service uses SQLite by default; set `AUTH_DATABASE_PATH` only if you want to choose a different database file. Email/password signup works without OAuth provider credentials. To enable a social provider, set both its client ID and secret; a provider with missing credentials is disabled with an explicit error. Set `MICROSOFT_TENANT` to `common` for personal and organizational Microsoft accounts, or to your Entra tenant ID to restrict sign-in to that tenant.
+3. Register these callback URLs with the OAuth providers:
+   - Microsoft: `http://localhost:3001/auth/microsoft/callback`
+   - Google: `http://localhost:3001/auth/google/callback`
+   - GitHub: `http://localhost:3001/auth/github/callback`
+4. Set Google's authorized JavaScript origin to `http://localhost:5173`, and register the Microsoft callback as a Web redirect URI in the Microsoft Entra app registration. Grant Microsoft Graph delegated `User.Read` permission. Set the frontend API URL in `frontend/.env` using `frontend/.env.example` as a template.
+5. Start the frontend with `npm run frontend:dev` and the auth service in a separate terminal with `npm run auth:dev`. In Electron, social sign-in opens the provider flow in your system browser and hands the authenticated account back to the desktop app after authentication.
 
-Do not configure frontend Firebase settings with service-account credentials or OAuth client secrets. The older Passport/MongoDB authentication service remains available for compatibility but is not used by the current desktop sign-in flow.
+The service stores password accounts, provider identities, sign-in sessions, and short-lived desktop handoff tickets in SQLite. Passwords are never stored in plaintext: the backend hashes them with per-account random salts and `scrypt`, and verifies them with a timing-safe comparison. Login and signup attempts are rate limited, OAuth state is validated, and credentialed CORS is restricted to `FRONTEND_URL`. Existing accounts are not automatically linked across providers by email. In Electron, agent and file IPC operations verify the backend session before proceeding; failed or unavailable session verification denies the operation. In production, serve both apps over HTTPS; set `NODE_ENV=production` and set `TRUST_PROXY=true` when TLS terminates at a trusted reverse proxy. The frontend and backend must use the same site for the default `lax` cookie setting; deployments on separate sites need HTTPS and `SESSION_COOKIE_SAME_SITE=none`.
 
-## Legacy Passport Authentication Service
-
-The Express/Passport routes remain available for older clients. The current Electron app uses the Firebase profile API instead.
-
-Use `npm run auth:dev` only when you specifically need the legacy Passport/MongoDB service, or run `npm run start:oauth` from the `backend` folder. Its setup and provider credentials are separate from Firebase; do not treat it as the current desktop authentication backend.
+Email/password signup and login create and verify SQLite accounts. Desktop login sessions are maintained by Electron's session cookie store; OAuth sign-in uses a short-lived, single-use handoff ticket from the system browser to the app. OAuth client secrets and the session secret belong only in the ignored `backend/.env` file. No Firebase migration is required.
 
 ---
 
@@ -125,4 +128,3 @@ Use `npm run auth:dev` only when you specifically need the legacy Passport/Mongo
 - **Team Standards & Guidelines**: [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)
 - **Frontend Architecture & Components**: [frontend/FRONTEND_GUIDE.md](frontend/FRONTEND_GUIDE.md)
 - **System Architecture Synopsis**: [docs/SYNOPSIS.md](docs/SYNOPSIS.md)
-- **Firebase Authentication Setup**: [docs/FIREBASE_AUTH_SETUP.md](docs/FIREBASE_AUTH_SETUP.md)

@@ -1,26 +1,10 @@
 import React, { useState } from 'react';
-import {
-  Bot,
-  User,
-  ChevronDown,
-  ChevronRight,
-  Check,
-  Copy,
-  Terminal,
-  Sparkles,
-  AlertCircle,
-  Key,
-  RefreshCw
-} from 'lucide-react';
-import { useChat } from '../../hooks/useChat';
-import { Button } from '../common/Button';
+import { Bot, User, ChevronDown, ChevronRight, Check, Copy, Terminal } from 'lucide-react';
 
 export function ChatMessage({ message }) {
   const isUser = message.role === 'user';
-  const { openSettings } = useChat();
   const [isThinkingOpen, setIsThinkingOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const handleCopy = () => {
     if (message.content) {
@@ -30,80 +14,25 @@ export function ChatMessage({ message }) {
     }
   };
 
-  const handleDiagnosticAction = () => {
-    if (message.diagnostic?.actionKey === 'open-providers-settings' || !message.diagnostic?.actionKey) {
-      openSettings('providers');
-    }
-  };
-
   return (
     <div
-      className={`chat-message ${isUser ? 'chat-message--user' : 'chat-message--assistant'} ${message.isError ? 'chat-message--error' : ''}`}
+      className={`chat-message ${isUser ? 'chat-message--user' : 'chat-message--assistant'}`}
     >
-      <div className="chat-message__avatar" aria-hidden="true">
-        {isUser ? <User size={15} /> : <Bot size={15} />}
+      <div className="chat-message__avatar">
+        {isUser ? <User size={16} /> : <Bot size={16} />}
       </div>
 
       <div className="chat-message__content">
-        {/* Diagnostic Banner if Message is Error / Diagnostic */}
-        {message.isError && message.diagnostic && (
-          <div className="diagnostic-card">
-            <div className="diagnostic-card__header">
-              <div className="diagnostic-card__title-row">
-                <AlertCircle size={16} style={{ color: 'var(--status-error)', flexShrink: 0 }} />
-                <span className="diagnostic-card__title">{message.diagnostic.title}</span>
-              </div>
-              {message.diagnostic.actionLabel && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  icon={Key}
-                  onClick={handleDiagnosticAction}
-                >
-                  {message.diagnostic.actionLabel}
-                </Button>
-              )}
-            </div>
-
-            <p className="diagnostic-card__desc">{message.diagnostic.message}</p>
-            {message.diagnostic.suggestion && (
-              <p className="diagnostic-card__suggestion">{message.diagnostic.suggestion}</p>
-            )}
-
-            {message.diagnostic.technicalDetails && (
-              <div className="diagnostic-card__details">
-                <button
-                  type="button"
-                  className="diagnostic-card__details-toggle"
-                  onClick={() => setIsDetailsOpen(!isDetailsOpen)}
-                >
-                  {isDetailsOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                  <span>Technical details</span>
-                </button>
-                {isDetailsOpen && (
-                  <pre className="diagnostic-card__details-body">
-                    {message.diagnostic.technicalDetails}
-                  </pre>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Thinking / Reasoning Collapse (DeepSeek / Claude style) */}
-        {!isUser && !message.isError && message.thinking && (
+        {!isUser && message.thinking && (
           <div className="chat-message__thinking">
             <button
               type="button"
               className="chat-message__thinking-header"
               onClick={() => setIsThinkingOpen(!isThinkingOpen)}
             >
-              <div className="chat-message__thinking-header-left">
-                {isThinkingOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                <Sparkles size={13} style={{ color: 'var(--accent-indigo)' }} />
-                <span>Agent Reasoning & Plan</span>
-              </div>
-              <span className="chat-message__thinking-badge">Thought Process</span>
+              {isThinkingOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <span>Agent Reasoning & Plan</span>
             </button>
             {isThinkingOpen && (
               <div className="chat-message__thinking-body">
@@ -113,57 +42,52 @@ export function ChatMessage({ message }) {
           </div>
         )}
 
-        {/* Action Logs & Execution Trace */}
-        {!isUser && !message.isError && message.executionSteps && message.executionSteps.length > 0 && (
+        {/* Execution Steps Trace */}
+        {!isUser && message.executionSteps && message.executionSteps.length > 0 && (
           <div className="chat-message__execution">
             <div className="chat-message__execution-header">
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Terminal size={12} style={{ color: 'var(--accent-indigo)' }} />
+                <Terminal size={12} color="var(--accent-cyan)" />
                 Action Execution Trace
               </span>
-              <span className="chat-message__execution-count">
-                {message.executionSteps.length} {message.executionSteps.length === 1 ? 'Step' : 'Steps'}
-              </span>
+              <span>{message.executionSteps.length} Steps</span>
             </div>
             <div className="chat-message__execution-list">
               {message.executionSteps.map((step, idx) => (
                 <div key={idx} className="chat-message__execution-item">
-                  <span className="chat-message__execution-bullet">›</span>
-                  <span className="chat-message__execution-text">{step}</span>
+                  {step}
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Primary Message Bubble (only shown if not duplicate of diagnostic) */}
-        {(!message.isError || !message.diagnostic) && (
-          <div className="chat-message__bubble">
-            {message.content}
-          </div>
-        )}
+        {/* Primary Message Bubble */}
+        <div className="chat-message__bubble">
+          {message.content}
+        </div>
 
-        {/* Footer Actions (Timestamp & Copy) */}
-        <div className="chat-message__footer">
-          <span className="chat-message__timestamp">{message.timestamp}</span>
-          {!isUser && message.content && !message.isError && (
+        {/* Footer Actions */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '11px',
+            color: 'var(--text-muted)',
+            padding: '2px 4px'
+          }}
+        >
+          <span>{message.timestamp}</span>
+          {!isUser && message.content && (
             <button
               type="button"
               onClick={handleCopy}
-              className="chat-message__copy-btn"
-              title="Copy response to clipboard"
+              className="btn-icon"
+              style={{ width: '20px', height: '20px' }}
+              title="Copy message"
             >
-              {isCopied ? (
-                <>
-                  <Check size={12} style={{ color: 'var(--status-success)' }} />
-                  <span>Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy size={12} />
-                  <span>Copy</span>
-                </>
-              )}
+              {isCopied ? <Check size={12} color="var(--accent-emerald)" /> : <Copy size={12} />}
             </button>
           )}
         </div>
@@ -171,3 +95,4 @@ export function ChatMessage({ message }) {
     </div>
   );
 }
+

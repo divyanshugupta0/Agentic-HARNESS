@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import { Shield, Settings } from 'lucide-react';
+import { Shield, Settings, Info } from 'lucide-react';
 
 export function PluginDetails({ plugin, isOpen, onClose, onSaveConfig }) {
   if (!plugin) return null;
@@ -17,15 +17,15 @@ export function PluginDetails({ plugin, isOpen, onClose, onSaveConfig }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`${plugin.name} Settings`}
+      title={`${plugin.name} — Settings`}
       id="plugin-details-modal"
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div>
-          <span style={{ fontSize: '11px', color: 'var(--accent-indigo)', textTransform: 'uppercase', fontWeight: 600 }}>
+          <span style={{ fontSize: '11px', color: 'var(--accent-cyan)', textTransform: 'uppercase', fontWeight: 600 }}>
             {plugin.category} • v{plugin.version}
           </span>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
             {plugin.description}
           </p>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -34,13 +34,23 @@ export function PluginDetails({ plugin, isOpen, onClose, onSaveConfig }) {
         </div>
 
         {/* Permissions Block */}
-        <div className="plugin-details__permission-box">
+        <div
+          style={{
+            backgroundColor: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+            padding: '12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px'
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
-            <Shield size={14} style={{ color: 'var(--status-success)' }} />
-            Security & IPC Isolation
+            <Shield size={14} color="var(--accent-emerald)" />
+            Security Permissions
           </div>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            This tool executes inside the sandboxed desktop environment and complies with strict Electron context isolation.
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            This plugin operates within the local sandboxed desktop environment and obeys context-isolation IPC rules.
           </p>
         </div>
 
@@ -53,6 +63,7 @@ export function PluginDetails({ plugin, isOpen, onClose, onSaveConfig }) {
 
           {Object.entries(config).map(([key, val]) => {
             const isBool = typeof val === 'boolean';
+            const isArray = Array.isArray(val);
 
             return (
               <div
@@ -62,14 +73,14 @@ export function PluginDetails({ plugin, isOpen, onClose, onSaveConfig }) {
                   flexDirection: isBool ? 'row' : 'column',
                   justifyContent: isBool ? 'space-between' : 'flex-start',
                   alignItems: isBool ? 'center' : 'stretch',
-                  gap: '6px',
-                  backgroundColor: 'var(--bg-tertiary)',
-                  padding: '10px 12px',
-                  borderRadius: 'var(--radius-md)',
+                  gap: '4px',
+                  backgroundColor: 'var(--bg-primary)',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
                   border: '1px solid var(--border-subtle)'
                 }}
               >
-                <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
                   {key}
                 </span>
 
@@ -78,7 +89,6 @@ export function PluginDetails({ plugin, isOpen, onClose, onSaveConfig }) {
                     type="checkbox"
                     checked={val}
                     onChange={(e) => setConfig({ ...config, [key]: e.target.checked })}
-                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
                   />
                 ) : (
                   <input
@@ -87,12 +97,17 @@ export function PluginDetails({ plugin, isOpen, onClose, onSaveConfig }) {
                       fontSize: '12px',
                       color: 'var(--text-primary)',
                       backgroundColor: 'var(--bg-secondary)',
-                      padding: '6px 10px',
-                      borderRadius: 'var(--radius-sm)',
+                      padding: '4px 8px',
+                      borderRadius: 'var(--radius-xs)',
                       border: '1px solid var(--border-default)'
                     }}
-                    value={val}
-                    onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
+                    value={isArray ? val.join(', ') : val}
+                    onChange={(e) => {
+                      const newV = isArray
+                        ? e.target.value.split(',').map((s) => s.trim())
+                        : e.target.value;
+                      setConfig({ ...config, [key]: newV });
+                    }}
                   />
                 )}
               </div>
@@ -100,15 +115,16 @@ export function PluginDetails({ plugin, isOpen, onClose, onSaveConfig }) {
           })}
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
           <Button variant="primary" onClick={handleSave}>
-            Save Changes
+            Save Parameters
           </Button>
         </div>
       </div>
     </Modal>
   );
 }
+

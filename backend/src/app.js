@@ -3,9 +3,8 @@ const express = require('express');
 const session = require('express-session');
 const helmet = require('helmet');
 const { createAuthRouter } = require('./routes/auth');
-const { createProfileRouter } = require('./routes/firebaseUsers');
 
-function createApp({ config, passport, sessionStore, users, desktopAuth, firebaseAdmin, profileDatabase }) {
+function createApp({ config, passport, sessionStore, users, desktopAuth }) {
   if (!config || !passport || !sessionStore || !users || !desktopAuth) {
     throw new Error('config, passport, sessionStore, users, and desktopAuth are required');
   }
@@ -40,15 +39,10 @@ function createApp({ config, passport, sessionStore, users, desktopAuth, firebas
   app.use(passport.initialize());
   app.use(passport.session());
   app.use('/auth', createAuthRouter(passport, config, users, desktopAuth));
-  if (profileDatabase) {
-    app.use('/api', createProfileRouter(firebaseAdmin, profileDatabase));
-  }
 
   app.use((error, _req, res, _next) => {
     console.error('Authentication request failed:', error);
-    res.status(error.status || 500).json({
-      error: error.status ? error.message : 'Authentication request failed'
-    });
+    res.status(500).json({ error: 'Authentication request failed' });
   });
 
   return app;

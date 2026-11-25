@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { ArrowUp, Paperclip, Wrench, Square, Pause, Play, Check, X } from 'lucide-react';
+import { ArrowUp, Paperclip, Wrench, Square, Pause, Play, Check } from 'lucide-react';
 import { useChat } from '../../hooks/useChat';
 import { BUILTIN_TOOLS } from '../../constants/tools';
 
@@ -32,16 +32,28 @@ export function PromptInput({ inputRef, value, onChange, onSubmit }) {
     <div className="prompt-composer" id="chat-prompt-composer">
       <div className="prompt-composer__box">
         {attachmentName && (
-          <div className="prompt-composer__attachment-chip">
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              backgroundColor: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '12px',
+              color: 'var(--accent-cyan)',
+              alignSelf: 'flex-start'
+            }}
+          >
             <Paperclip size={12} />
             <span>{attachmentName}</span>
             <button
               type="button"
-              className="prompt-composer__attachment-remove"
               onClick={() => setAttachmentName(null)}
-              title="Remove attachment"
+              style={{ marginLeft: '4px', cursor: 'pointer', color: 'var(--text-muted)' }}
             >
-              <X size={12} />
+              ×
             </button>
           </div>
         )}
@@ -50,7 +62,7 @@ export function PromptInput({ inputRef, value, onChange, onSubmit }) {
           ref={inputRef}
           id="chat-prompt-input"
           className="prompt-composer__textarea"
-          placeholder="Ask Agentic Harness to analyze files, run tasks, or write code... (Shift+Enter for newline)"
+          placeholder="Ask Agentic Harness to analyze files, run tasks, or write code... (Shift+Enter for new line)"
           rows={1}
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -74,7 +86,7 @@ export function PromptInput({ inputRef, value, onChange, onSubmit }) {
               title="Attach local file context"
               id="prompt-attach-file-btn"
             >
-              <Paperclip size={15} />
+              <Paperclip size={16} />
             </button>
 
             {/* Tools Selector Popover Toggle */}
@@ -91,28 +103,51 @@ export function PromptInput({ inputRef, value, onChange, onSubmit }) {
               </button>
 
               {isToolsPopoverOpen && (
-                <div className="prompt-composer__tools-popover">
-                  <div className="prompt-composer__tools-popover-header">
-                    <span>Available Agent Tools</span>
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 'calc(100% + 8px)',
+                    left: 0,
+                    width: '260px',
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: 'var(--radius-lg)',
+                    boxShadow: 'var(--shadow-lg)',
+                    padding: '10px',
+                    zIndex: 50,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
+                  }}
+                >
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', padding: '4px 6px' }}>
+                    Available Agent Tools
                   </div>
-                  <div className="prompt-composer__tools-popover-list">
-                    {BUILTIN_TOOLS.map((tool) => {
-                      const isSelected = activeTools.includes(tool.id);
-                      return (
-                        <div
-                          key={tool.id}
-                          className={`prompt-composer__tool-item ${isSelected ? 'prompt-composer__tool-item--selected' : ''}`}
-                          onClick={() => toggleTool(tool.id)}
-                        >
-                          <div className="prompt-composer__tool-info">
-                            <span className="prompt-composer__tool-name">{tool.name}</span>
-                            <span className="prompt-composer__tool-desc">{tool.description}</span>
-                          </div>
-                          {isSelected && <Check size={14} style={{ color: 'var(--accent-indigo)' }} />}
+                  {BUILTIN_TOOLS.map((tool) => {
+                    const isSelected = activeTools.includes(tool.id);
+                    return (
+                      <div
+                        key={tool.id}
+                        onClick={() => toggleTool(tool.id)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '6px 8px',
+                          borderRadius: 'var(--radius-md)',
+                          backgroundColor: isSelected ? 'var(--bg-tertiary)' : 'transparent',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{tool.name}</span>
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{tool.description}</span>
                         </div>
-                      );
-                    })}
-                  </div>
+                        {isSelected && <Check size={14} color="var(--accent-cyan)" />}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -127,18 +162,18 @@ export function PromptInput({ inputRef, value, onChange, onSubmit }) {
                   className="btn-icon"
                   onClick={isPaused ? resumeAgent : pauseAgent}
                   title={isPaused ? 'Resume execution' : 'Pause execution'}
-                  style={{ color: 'var(--status-warning)' }}
+                  style={{ color: 'var(--accent-amber)' }}
                 >
-                  {isPaused ? <Play size={15} /> : <Pause size={15} />}
+                  {isPaused ? <Play size={16} /> : <Pause size={16} />}
                 </button>
                 <button
                   type="button"
                   className="btn-icon"
                   onClick={stopAgent}
                   title="Stop agent run"
-                  style={{ color: 'var(--status-error)' }}
+                  style={{ color: 'var(--accent-rose)' }}
                 >
-                  <Square size={15} />
+                  <Square size={16} />
                 </button>
               </>
             )}
@@ -149,9 +184,9 @@ export function PromptInput({ inputRef, value, onChange, onSubmit }) {
               className="prompt-composer__send-btn"
               disabled={!value.trim() || isRunning}
               onClick={onSubmit}
-              title="Send instructions (Enter)"
+              title="Execute Mission (Enter)"
             >
-              <ArrowUp size={16} />
+              <ArrowUp size={18} />
             </button>
           </div>
         </div>

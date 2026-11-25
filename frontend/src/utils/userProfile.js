@@ -1,9 +1,10 @@
-export function mapFirebaseUser(firebaseUser, profile) {
+export function mapFirebaseUser(firebaseUser, profile, signedInProviderId) {
   const providerProfile = firebaseUser.providerData?.find(
     (provider) => provider.providerId !== 'firebase'
   );
   const email = firebaseUser.email || providerProfile?.email || profile?.email || '';
-  const providerId = providerProfile?.providerId
+  const providerId = signedInProviderId
+    || providerProfile?.providerId
     || firebaseUser.providerData?.[0]?.providerId
     || profile?.authProvider
     || 'password';

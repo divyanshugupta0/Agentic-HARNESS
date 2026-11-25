@@ -1,12 +1,15 @@
-const { applicationDefault, cert, getApp, getApps, initializeApp } = require('firebase-admin/app');
-const { getAuth } = require('firebase-admin/auth');
+const admin = require('firebase-admin');
 
 function createFirebaseAdmin(env = process.env) {
   const projectId = env.FIREBASE_ADMIN_PROJECT_ID || env.FIREBASE_PROJECT_ID || env.GCLOUD_PROJECT;
-  const hasCredentials = Boolean(env.FIREBASE_SERVICE_ACCOUNT_JSON || env.GOOGLE_APPLICATION_CREDENTIALS);
+  const hasCredentials = Boolean(env.FIREBASE_SERVICE_ACCOUNT_JSON || env.GOOGLE_APPLICATION_CREDENTIALS || projectId);
 
-  if (!hasCredentials && !projectId) {
+  if (!hasCredentials) {
     return null;
+  }
+
+  if (admin.apps.length) {
+    return admin;
   }
 
   let credential;
@@ -17,18 +20,16 @@ function createFirebaseAdmin(env = process.env) {
     } catch {
       throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON must contain valid JSON');
     }
-    credential = cert(serviceAccount);
-  } else if (env.GOOGLE_APPLICATION_CREDENTIALS) {
-    credential = applicationDefault();
+    credential = admin.credential.cert(serviceAccount);
+  } else {
+    credential = admin.credential.applicationDefault();
   }
 
-  const app = getApps().length
-    ? getApp()
-    : initializeApp({
-        ...(credential ? { credential } : {}),
-        ...(projectId ? { projectId } : {})
-      });
-  return { auth: () => getAuth(app) };
+  admin.initializeApp({
+    credential,
+    ...(projectId ? { projectId } : {})
+  });
+  return admin;
 }
 
 module.exports = { createFirebaseAdmin };

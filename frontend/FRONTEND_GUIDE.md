@@ -46,13 +46,6 @@ frontend/
 │   │   │   ├── PluginCard.jsx  # Card displaying plugin details, enable toggle, install CTA
 │   │   │   └── PluginDetails.jsx # Configuration and permission inspection modal
 │   │   │
-│   │   ├── settings/           # Modular settings views
-│   │   │   ├── SettingsModal.jsx # Central settings modal with category switcher
-│   │   │   ├── ApiProvidersSettings.jsx # Two-pane API provider connection & verification
-│   │   │   ├── GeneralSettings.jsx      # Workspace profile and audio/scroll preferences
-│   │   │   ├── ModelsSettings.jsx       # Available models from configured providers
-│   │   │   └── PrivacySettings.jsx      # Local isolation and security overview
-│   │   │
 │   │   └── auth/               # User authentication screens
 │   │       ├── SignIn.jsx      # Email/password authentication form
 │   │       ├── SignUp.jsx      # Profile registration form
@@ -66,11 +59,7 @@ frontend/
 │   │   ├── authService.js      # Session management and mock user persistence
 │   │   ├── chatService.js      # Conversation storage, message handling, and task execution
 │   │   ├── fileService.js      # Virtual & local filesystem operations and tab management
-│   │   ├── pluginService.js    # Extensible tool and plugin registry
-│   │   └── providerService.js  # AI model providers, API credentials, dynamic model registry
-│   │
-│   ├── __tests__/              # Automated test suite
-│   │   └── appEnhancements.test.js # Provider, diagnostics, dynamic models & navigation tests
+│   │   └── pluginService.js    # Extensible tool and plugin registry
 │   │
 │   ├── hooks/                  # Custom React hooks
 │   │   ├── useAuth.js          # Direct hook for authentication state and modals
@@ -80,7 +69,6 @@ frontend/
 │   │
 │   ├── utils/                  # Shared helper functions
 │   │   ├── cn.js               # Clean CSS class name merger
-│   │   ├── diagnostics.js      # Categorized errors and secret token redaction
 │   │   ├── fileIcons.jsx       # Consolidated file icon mapping
 │   │   └── formatDate.js       # Date grouping and relative time formatters
 │   │
@@ -131,8 +119,6 @@ frontend/
 | `Marketplace` | `src/components/marketplace/Marketplace.jsx` | Category-filtered plugin and agent tools catalog | None | `pluginService` | `PluginCard`, `PluginDetails` |
 | `PluginCard` | `src/components/marketplace/PluginCard.jsx` | Presentation card for an individual tool/plugin | `plugin`, `onToggleInstall`, `onToggleEnabled`, `onOpenDetails` | Lucide icons | `Marketplace` |
 | `PluginDetails`| `src/components/marketplace/PluginDetails.jsx` | Modal dialog for editing plugin parameters | `plugin`, `isOpen`, `onClose`, `onSaveConfig` | `Modal`, `Button` | `Marketplace` |
-| `SettingsModal` | `src/components/settings/SettingsModal.jsx` | Tabbed dialog routing to specific configuration panes | `isOpen`, `onClose`, `initialCategory` | Lucide icons | `Sidebar`, `Header` |
-| `ApiProvidersSettings` | `src/components/settings/ApiProvidersSettings.jsx` | Manages AI provider connections, API keys & testing | None | `providerService`, `diagnostics` | `SettingsModal` |
 | `SignIn` | `src/components/auth/SignIn.jsx` | Authentication form with email, password & remember me | `onSwitchMode` | `useAuth` | `AuthLayout` |
 | `SignUp` | `src/components/auth/SignUp.jsx` | Account creation form with name, email & password | `onSwitchMode` | `useAuth` | `AuthLayout` |
 | `AuthLayout` | `src/components/auth/AuthLayout.jsx` | Modal dialog wrapping SignIn or SignUp | None | `useAuth`, `Modal` | `MainWorkspace` |
@@ -141,13 +127,7 @@ frontend/
 
 ## 3. CSS Class Naming Conventions (BEM)
 
-All stylesheets adhere strictly to the **Block Element Modifier (BEM)** convention and utilize human-centered CSS design tokens (`variables.css`).
-
-### Design System Principles
-- **Palette**: Calm, restrained neutral backgrounds (`#f9fafb` light, `#0d0f12` dark), subtle borders (`#e5e7eb` light, `#262b35` dark), and purposeful accents (`#4f46e5` indigo / `#3b82f6` blue).
-- **Shadows**: Natural, subtle elevation without neon glows or excessive glassmorphism.
-- **Typography**: Inter for primary UI and JetBrains Mono for code, steps, and technical metadata.
-- **Micro-Interactions**: Subtle 140ms–200ms cubic-bezier transitions with full `prefers-reduced-motion` compliance.
+All stylesheets adhere strictly to the **Block Element Modifier (BEM)** convention.
 
 ### Standardized Classes Table
 
@@ -157,37 +137,26 @@ All stylesheets adhere strictly to the **Block Element Modifier (BEM)** conventi
 .sidebar--collapsed {}
 .sidebar__header {}
 .sidebar__brand {}
-.sidebar__logo-badge {}
 .sidebar__brand-text {}
 .sidebar__actions {}
 .sidebar__new-chat-btn {}
-.sidebar__new-chat-content {}
-.sidebar__new-chat-shortcut {}
 .sidebar__search-btn {}
-.sidebar__search-shortcut {}
 .sidebar__history {}
 .sidebar__group {}
 .sidebar__group-title {}
 .sidebar__item {}
 .sidebar__item--active {}
-.sidebar__item-indicator {}
 .sidebar__footer {}
 .sidebar__profile {}
-.sidebar__avatar {}
 
 /* Header */
 .header {}
 .header__left {}
-.header__workspace-info {}
-.header__workspace-title {}
-.header__model-badge {}
 .header__tabs {}
 .header__tab-btn {}
 .header__tab-btn--active {}
+.header__model-badge {}
 .header__right {}
-.header__status-indicator {}
-.header__status-dot {}
-.header__status-dot--pulse {}
 
 /* Chat Workspace */
 .chat-workspace {}

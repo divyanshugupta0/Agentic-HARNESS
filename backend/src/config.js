@@ -1,3 +1,4 @@
+const path = require('node:path');
 const { URL } = require('node:url');
 
 function required(env, name) {
@@ -76,10 +77,10 @@ function loadConfig(env = process.env) {
 
   return {
     port,
+    databasePath: path.resolve(__dirname, '..', env.AUTH_DATABASE_PATH || path.join('database', 'app.db')),
     authPublicUrl,
     isProduction: env.NODE_ENV === 'production',
     frontendUrl,
-    mongoUri: required(env, 'MONGODB_URI'),
     sessionSecret,
     sameSite,
     trustProxy: env.TRUST_PROXY === 'true',

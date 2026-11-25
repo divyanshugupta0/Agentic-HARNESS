@@ -5,8 +5,8 @@ contextBridge.exposeInMainWorld('api', {
   // Expose only whitelisted IPC channels here
   sendMessage: (channel, data) => ipcRenderer.invoke(channel, data),
   onMessage: (channel, callback) => ipcRenderer.on(channel, (event, ...args) => callback(...args)),
-  authenticateFirebase: (idToken) => ipcRenderer.invoke('auth:firebase-token', idToken),
-  localLogin: (user) => ipcRenderer.invoke('auth:local-login', user),
+  openSocialLogin: (provider) => ipcRenderer.invoke('auth:open-social-login', provider),
+  authenticate: (credentials) => ipcRenderer.invoke('auth:credential', credentials),
   getAuthUser: () => ipcRenderer.invoke('auth:session-user'),
   logout: () => ipcRenderer.invoke('auth:logout')
 });

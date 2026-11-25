@@ -1,39 +1,21 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { chatService } from '../services/chatService';
-import { api } from './../services/api';
-import { providerService } from '../services/providerService';
+import { api } from '../services/api';
+import { DEFAULT_MODEL_ID } from '../constants/models';
 
 const ChatContext = createContext(null);
 
 export function ChatProvider({ children }) {
   const [conversations, setConversations] = useState(() => chatService.getConversations());
   const [activeConversationId, setActiveConversationId] = useState(() => chatService.getActiveConversation()?.id || null);
-  const [selectedModel, setSelectedModel] = useState(() => {
-    const models = providerService.getAvailableModels();
-    return models[0]?.id || null;
-  });
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL_ID);
   const [activeTools, setActiveTools] = useState(['fsTool', 'shellTool', 'httpTool']);
   const [agentStatus, setAgentStatus] = useState('idle'); // 'idle' | 'running' | 'paused' | 'stopped'
   const [searchQuery, setSearchQuery] = useState('');
-  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
-  const [settingsCategory, setSettingsCategory] = useState('appearance');
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId) || null;
 
-  // Keep selected model synchronized with configured providers
-  useEffect(() => {
-    const unsub = providerService.subscribe(() => {
-      const models = providerService.getAvailableModels();
-      setSelectedModel((current) => {
-        if (!models.length) return null;
-        if (models.some((m) => m.id === current)) return current;
-        return models[0].id;
-      });
-    });
-    return unsub;
-  }, []);
-
-  // Listen for real agent events
+  // Listen for agent events
   useEffect(() => {
     const unsubLog = api.on('agent:log', (msg) => {
       console.log('[Agent Log]', msg);
@@ -53,7 +35,7 @@ export function ChatProvider({ children }) {
     setActiveConversationId(id);
   };
 
-  const createNewChat = (title = 'New Mission') => {
+  const createNewChat = (title = 'New Chat') => {
     const newConv = chatService.createNewConversation(title);
     setConversations([...chatService.getConversations()]);
     setActiveConversationId(newConv.id);
@@ -75,15 +57,6 @@ export function ChatProvider({ children }) {
     setActiveTools((prev) =>
       prev.includes(toolId) ? prev.filter((id) => id !== toolId) : [...prev, toolId]
     );
-  };
-
-  const openSettings = (category = 'general') => {
-    setSettingsCategory(category);
-    setSettingsModalOpen(true);
-  };
-
-  const closeSettings = () => {
-    setSettingsModalOpen(false);
   };
 
   const sendMessage = async (content) => {
@@ -127,10 +100,6 @@ export function ChatProvider({ children }) {
         conversations,
         activeConversation,
         activeConversationId,
-        selectConversation,
-        createNewChat,
-        deleteConversation,
-        renameConversation,
         selectedModel,
         setSelectedModel,
         activeTools,
@@ -140,12 +109,12 @@ export function ChatProvider({ children }) {
         stopAgent,
         pauseAgent,
         resumeAgent,
+        createNewChat,
+        selectConversation,
+        deleteConversation,
+        renameConversation,
         searchQuery,
-        setSearchQuery,
-        settingsModalOpen,
-        settingsCategory,
-        openSettings,
-        closeSettings
+        setSearchQuery
       }}
     >
       {children}
@@ -160,3 +129,4 @@ export function useChat() {
   }
   return context;
 }
+

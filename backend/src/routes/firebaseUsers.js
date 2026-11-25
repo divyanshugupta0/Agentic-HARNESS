@@ -19,10 +19,9 @@ function createProfileRouter(firebaseAdmin, profileDatabase) {
   const router = express.Router();
   const requireFirebaseUser = createFirebaseAuthMiddleware(firebaseAdmin);
 
-  const syncProfile = (decodedToken) => {
-    const email = typeof decodedToken.email === 'string'
-      ? decodedToken.email.trim().toLowerCase()
-      : '';
+  const syncProfile = async (decodedToken) => {
+    const firebaseUser = await firebaseAdmin.auth().getUser(decodedToken.uid);
+    const email = firebaseUser.email?.trim().toLowerCase();
     if (!email || email.length > 254) {
       const error = new Error('A valid email address is required to create an application profile.');
       error.status = 400;
@@ -30,12 +29,12 @@ function createProfileRouter(firebaseAdmin, profileDatabase) {
     }
 
     const profile = {
-      firebase_uid: decodedToken.uid,
-      full_name: (typeof decodedToken.name === 'string' ? decodedToken.name : email.split('@')[0]).trim().slice(0, 100),
+      firebase_uid: firebaseUser.uid,
+      full_name: (firebaseUser.displayName || email.split('@')[0]).trim().slice(0, 100),
       email,
-      profile_picture: typeof decodedToken.picture === 'string' ? decodedToken.picture : null,
-      auth_provider: decodedToken.firebase?.sign_in_provider || 'unknown',
-      email_verified: decodedToken.email_verified ? 1 : 0
+      profile_picture: firebaseUser.photoURL || null,
+      auth_provider: decodedToken.firebase?.sign_in_provider || firebaseUser.providerData[0]?.providerId || 'unknown',
+      email_verified: firebaseUser.emailVerified ? 1 : 0
     };
     return profileDatabase.syncUser(profile);
   };

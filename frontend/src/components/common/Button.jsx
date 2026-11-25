@@ -14,8 +14,7 @@ export function Button({
   onClick,
   className = '',
   type = 'button',
-  id,
-  style
+  id
 }) {
   const variantClass = `btn--${variant}`;
   const sizeClass = size === 'sm' ? 'btn--sm' : '';
@@ -26,11 +25,11 @@ export function Button({
       type={type}
       disabled={disabled}
       onClick={onClick}
-      style={style}
       className={`btn ${variantClass} ${sizeClass} ${className}`.trim()}
     >
-      {Icon && <Icon size={size === 'sm' ? 14 : 15} style={{ flexShrink: 0 }} />}
+      {Icon && <Icon size={size === 'sm' ? 14 : 16} />}
       {children}
     </button>
   );
 }
+

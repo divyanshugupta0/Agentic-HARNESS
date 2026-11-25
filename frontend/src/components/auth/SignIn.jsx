@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../common/Button';
 import { AuthProviders } from './AuthProviders';
-import { getFirebaseAuthError } from '../../firebase/auth';
 
-export function SignIn({ onSwitchMode, onForgotPassword }) {
+export function SignIn({ onSwitchMode }) {
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -18,9 +18,9 @@ export function SignIn({ onSwitchMode, onForgotPassword }) {
     setError('');
     setLoading(true);
     try {
-      await signIn({ email, password });
+      await signIn({ email, password, rememberMe });
     } catch (err) {
-      setError(getFirebaseAuthError(err));
+      setError(err.message || 'Failed to sign in');
     } finally {
       setLoading(false);
     }
@@ -29,9 +29,16 @@ export function SignIn({ onSwitchMode, onForgotPassword }) {
   return (
     <form className="auth-form" id="signin-form" onSubmit={handleSubmit}>
       {error && (
-        <div className="auth-form__error-alert">
-          <AlertCircle size={15} style={{ flexShrink: 0 }} />
-          <span>{error}</span>
+        <div
+          style={{
+            padding: '8px 12px',
+            borderRadius: 'var(--radius-sm)',
+            backgroundColor: 'rgba(239, 68, 68, 0.15)',
+            color: 'var(--accent-rose)',
+            fontSize: '12px'
+          }}
+        >
+          {error}
         </div>
       )}
 
@@ -76,15 +83,15 @@ export function SignIn({ onSwitchMode, onForgotPassword }) {
       </div>
 
       <div className="auth-form__row">
-        <span />
-        <button
-          type="button"
-          className="auth-form__switch-link"
-          onClick={onForgotPassword}
-          disabled={loading}
-        >
-          Forgot password?
-        </button>
+        <label className="auth-form__checkbox-label">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+          />
+          <span>Remember me</span>
+        </label>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Local sandbox session</span>
       </div>
 
       <Button
@@ -92,9 +99,9 @@ export function SignIn({ onSwitchMode, onForgotPassword }) {
         type="submit"
         disabled={loading}
         id="signin-submit-btn"
-        style={{ width: '100%', marginTop: '4px', justifyContent: 'center' }}
+        style={{ width: '100%', marginTop: '4px' }}
       >
-        {loading ? 'Signing in...' : 'Sign In'}
+        {loading ? 'Authenticating...' : 'Sign In to Workspace'}
       </Button>
 
       <AuthProviders passwordCredentials={{ email, password }} />

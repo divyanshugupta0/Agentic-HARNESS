@@ -1,6 +1,7 @@
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
+  FacebookAuthProvider,
   GithubAuthProvider,
   getRedirectResult,
   GoogleAuthProvider,
@@ -19,11 +20,13 @@ import {
 import { firebaseAuth, isFirebaseConfigured } from './firebaseConfig';
 
 const providers = {
+  facebook: new FacebookAuthProvider(),
   google: new GoogleAuthProvider(),
   microsoft: new OAuthProvider('microsoft.com'),
   github: new GithubAuthProvider()
 };
 
+providers.facebook.addScope('email');
 providers.google.setCustomParameters({ prompt: 'select_account' });
 providers.microsoft.setCustomParameters({
   prompt: 'select_account',
@@ -86,15 +89,19 @@ export async function firebaseSocialSignIn(providerName) {
   }
 }
 
-export async function firebaseLinkGithubWithPassword(email, password, signInError) {
+export async function firebaseLinkProviderWithPassword(providerName, email, password, signInError) {
   const expectedEmail = signInError?.customData?.email;
   if (typeof expectedEmail === 'string' && expectedEmail.toLowerCase() !== email.trim().toLowerCase()) {
-    throw new Error('The GitHub account email does not match the email in the sign-in form.');
+    throw new Error(`The ${providerName} account email does not match the email in the sign-in form.`);
   }
 
-  const pendingCredential = GithubAuthProvider.credentialFromError(signInError);
+  const providerClass = {
+    facebook: FacebookAuthProvider,
+    github: GithubAuthProvider
+  }[providerName];
+  const pendingCredential = providerClass?.credentialFromError(signInError);
   if (!pendingCredential) {
-    throw new Error('Unable to continue GitHub account linking. Please try GitHub sign-in again.');
+    throw new Error(`Unable to continue ${providerName} account linking. Please try sign-in again.`);
   }
 
   const auth = await initializeFirebasePersistence();
@@ -102,6 +109,10 @@ export async function firebaseLinkGithubWithPassword(email, password, signInErro
   const result = await linkWithCredential(user, pendingCredential);
   await result.user.getIdToken(true);
   return result.user;
+}
+
+export async function firebaseLinkGithubWithPassword(email, password, signInError) {
+  return firebaseLinkProviderWithPassword('github', email, password, signInError);
 }
 
 export async function firebasePasswordReset(email) {
@@ -138,12 +149,19 @@ export function getProviderName(user) {
 
 export function getFirebaseAuthError(error, providerName) {
   const code = error?.code;
+  const message = String(error?.message || '');
   const providerLabels = {
+    facebook: 'Facebook',
     google: 'Google',
     github: 'GitHub',
     microsoft: 'Microsoft'
   };
   const providerLabel = providerLabels[providerName] || 'OAuth';
+  if (providerName === 'facebook' && (code === 'auth/operation-not-allowed'
+    || code === 'auth/invalid-oauth-client-id'
+    || message.includes('facebook.com'))) {
+    return 'Facebook sign-in is not fully configured in Firebase. Enable Facebook in Authentication → Sign-in method, add the Meta App ID and App Secret, configure the Firebase OAuth redirect URI in Meta, authorize localhost and your app domain, and save.';
+  }
   if (code === 'auth/configuration-not-found') {
     return 'Firebase Authentication is not enabled for this project yet. In Firebase Console, open Authentication, click Get started, enable the sign-in provider you are using under Sign-in method, save, then reload the app.';
   }
@@ -151,8 +169,8 @@ export function getFirebaseAuthError(error, providerName) {
     return 'Firebase rejected this web app configuration. Check that the API key and app ID in frontend/.env are copied from the Web app registered in this same Firebase project, then restart Vite.';
   }
   if (code === 'auth/account-exists-with-different-credential') {
-    if (providerName === 'github') {
-      return 'An account already exists for this email. Enter that account\'s email and password above, then try GitHub again to link it.';
+    if (['facebook', 'github'].includes(providerName)) {
+      return `An account already exists for this email. Enter its email and password above, then try ${providerLabel} again to link it.`;
     }
     return 'An account already exists for this email with a different sign-in method. Sign in with that method first; accounts are not automatically linked.';
   }

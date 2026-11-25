@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Save, Check, FileCode } from 'lucide-react';
+import { Save, Check } from 'lucide-react';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { Button } from '../common/Button';
 
@@ -21,14 +21,17 @@ export function FileEditor() {
 
   if (!activeFile) {
     return (
-      <div className="files-workspace__empty-state">
-        <div className="files-workspace__empty-icon">
-          <FileCode size={32} />
-        </div>
-        <p className="files-workspace__empty-title">No file open</p>
-        <p className="files-workspace__empty-desc">
-          Select a file from the explorer on the left or create a new file to start editing.
-        </p>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--text-muted)',
+          fontSize: '13px'
+        }}
+      >
+        Select a file from the explorer to preview or edit.
       </div>
     );
   }
@@ -47,16 +50,16 @@ export function FileEditor() {
       {/* Editor Toolbar */}
       <div className="files-workspace__editor-toolbar">
         <div className="files-workspace__editor-info">
-          <span className="files-workspace__editor-path">
-            {activeFile.path || activeFile.name}
+          <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+            {activeFile.path}
           </span>
           {activeFile.isDirty && (
-            <span className="files-workspace__unsaved-indicator">
-              • Unsaved
+            <span style={{ color: 'var(--accent-amber)', fontSize: '11px' }}>
+              • Unsaved changes
             </span>
           )}
-          <span className="files-workspace__stat-badge">{lineCount} lines</span>
-          <span className="files-workspace__stat-badge">{activeFile.content?.length || 0} chars</span>
+          <span>{lineCount} lines</span>
+          <span>{activeFile.content?.length || 0} characters</span>
         </div>
 
         <Button
@@ -66,13 +69,13 @@ export function FileEditor() {
           onClick={saveActiveFile}
           id="files-save-button"
         >
-          {activeFile.isDirty ? 'Save (Ctrl+S)' : 'Saved'}
+          {activeFile.isDirty ? 'Save File' : 'Saved'}
         </Button>
       </div>
 
       {/* Editor Main Pane */}
       <div className="files-workspace__editor-pane">
-        <div className="files-workspace__line-numbers" ref={lineNumbersRef} aria-hidden="true">
+        <div className="files-workspace__line-numbers" ref={lineNumbersRef}>
           {Array.from({ length: lineCount }).map((_, i) => (
             <div key={i}>{i + 1}</div>
           ))}

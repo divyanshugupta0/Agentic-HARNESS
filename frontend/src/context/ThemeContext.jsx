@@ -23,9 +23,8 @@ export const CODEX_THEMES = [
 
 export const APPEARANCE_THEMES = [...CHATGPT_THEMES, ...CODEX_THEMES];
 const VALID_MODES = ['system', 'light', 'dark'];
-const DEFAULT_ACCENT = '#4f46e5';
+const DEFAULT_ACCENT = '#3b82f6';
 const ACCENT_PRESETS = {
-  indigo: '#4f46e5',
   blue: '#3b82f6',
   purple: '#8b5cf6',
   green: '#10b981',
@@ -35,7 +34,7 @@ const ACCENT_PRESETS = {
 };
 
 const PALETTES = {
-  default: { dark: ['#0d0f12', '#14171c', '#1c2027', '#262b35', '#f4f5f8', '#9ca3af', '#6b7280'], light: ['#f9fafb', '#ffffff', '#f3f4f6', '#e5e7eb', '#111827', '#4b5563', '#6b7280'] },
+  default: { dark: ['#090b10', '#0f1219', '#151a23', '#202936', '#f3f6fb', '#a6b1c2', '#7b8798'], light: ['#f5f7fb', '#edf2fb', '#e8eefb', '#dfe7f4', '#111827', '#475569', '#64748b'] },
   light: { dark: ['#10141c', '#171d27', '#202735', '#303c4d', '#f4f7fc', '#b6c1d1', '#8e9aab'], light: ['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#172033', '#475569', '#64748b'] },
   dark: { dark: ['#07090d', '#0c0f14', '#141920', '#242d38', '#f5f7fa', '#aab4c2', '#7a8695'], light: ['#eef2f7', '#e3e9f1', '#d9e1eb', '#c8d2df', '#111827', '#475569', '#64748b'] },
   absolutely: { dark: ['#17100f', '#211715', '#30211e', '#47302a', '#fff4f0', '#dfbcb2', '#b89086'], light: ['#fff8f5', '#fff0e9', '#ffe8df', '#f4d8cb', '#32211d', '#705249', '#8d6a60'] },

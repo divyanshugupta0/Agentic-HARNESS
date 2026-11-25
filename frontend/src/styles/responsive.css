@@ -54,36 +54,3 @@
   }
 
 }
-
-@media (max-width: 520px) {
-  .modal-overlay {
-    padding: 12px;
-  }
-
-  .password-reset-page {
-    align-items: flex-start;
-    padding: 16px;
-  }
-
-  .password-reset-card {
-    margin: auto 0;
-    padding: 22px 18px;
-  }
-
-  .password-requirements {
-    grid-template-columns: 1fr;
-  }
-
-  .modal-content {
-    max-height: calc(100dvh - 24px);
-  }
-
-  .auth-providers__buttons {
-    grid-template-columns: 1fr;
-  }
-
-  .auth-providers__button {
-    justify-content: flex-start;
-    padding-inline: 12px;
-  }
-}

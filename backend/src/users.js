@@ -35,56 +35,88 @@ async function verifyPassword(password, passwordHash) {
   return timingSafeEqual(expected, actual);
 }
 
-function createUserRepository(collection) {
+function createUserRepository(database) {
+  if (!database) {
+    throw new Error('A SQLite database is required');
+  }
+
   return {
     async initialize() {
-      await collection.createIndex({ provider: 1, providerId: 1 }, { unique: true });
-      await collection.createIndex(
-        { email: 1 },
-        { unique: true, partialFilterExpression: { provider: 'password' } }
-      );
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS auth_users (
+          id TEXT PRIMARY KEY,
+          provider TEXT NOT NULL CHECK (provider IN ('password', 'google', 'github', 'microsoft')),
+          provider_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          email TEXT,
+          avatar TEXT,
+          password_hash TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE (provider, provider_id)
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS auth_password_users_email_unique
+          ON auth_users (email) WHERE provider = 'password';
+      `);
     },
 
     async createPasswordUser({ name, email, password }) {
-      const user = {
-        id: randomUUID(),
-        provider: 'password',
-        providerId: email,
-        name,
-        email,
-        avatar: null,
-        passwordHash: await hashPassword(password),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      await collection.insertOne(user);
-      return publicUser(user);
+      const id = randomUUID();
+      const passwordHash = await hashPassword(password);
+      try {
+        database.prepare(`
+          INSERT INTO auth_users (id, provider, provider_id, name, email, password_hash)
+          VALUES (?, 'password', ?, ?, ?, ?)
+        `).run(id, email, name, email, passwordHash);
+      } catch (error) {
+        if (error.code === 'SQLITE_CONSTRAINT_UNIQUE'
+          && error.message.includes('auth_users.email')) {
+          const duplicateError = new Error('An account with that email already exists');
+          duplicateError.code = 'USER_EMAIL_TAKEN';
+          throw duplicateError;
+        }
+        throw error;
+      }
+      return publicUser({ id, provider: 'password', name, email, avatar: null });
     },
 
     async findPasswordUser(email) {
-      return collection.findOne({ provider: 'password', email });
+      const user = database.prepare(`
+        SELECT id, provider, provider_id, name, email, avatar, password_hash
+        FROM auth_users WHERE provider = 'password' AND email = ?
+      `).get(email);
+      if (!user) return null;
+      return {
+        id: user.id,
+        provider: user.provider,
+        providerId: user.provider_id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        passwordHash: user.password_hash
+      };
     },
 
     async upsertProviderUser(provider, profile) {
-      const now = new Date();
-      const user = await collection.findOneAndUpdate(
-        { provider, providerId: String(profile.id) },
-        {
-          $set: {
-            name: profile.name,
-            email: profile.email || null,
-            avatar: profile.avatar || null,
-            updatedAt: now
-          },
-          $setOnInsert: {
-            id: randomUUID(),
-            provider,
-            providerId: String(profile.id),
-            createdAt: now
-          }
-        },
-        { upsert: true, returnDocument: 'after' }
-      );
+      if (!['google', 'github', 'microsoft'].includes(provider)) {
+        throw new Error('Unsupported social sign-in provider');
+      }
+      const providerId = String(profile.id);
+      const id = randomUUID();
+      const upsert = database.prepare(`
+        INSERT INTO auth_users (id, provider, provider_id, name, email, avatar)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(provider, provider_id) DO UPDATE SET
+          name = excluded.name,
+          email = COALESCE(excluded.email, auth_users.email),
+          avatar = COALESCE(excluded.avatar, auth_users.avatar),
+          updated_at = CURRENT_TIMESTAMP
+      `);
+      upsert.run(id, provider, providerId, profile.name, profile.email || null, profile.avatar || null);
+      const user = database.prepare(`
+        SELECT id, provider, name, email, avatar
+        FROM auth_users WHERE provider = ? AND provider_id = ?
+      `).get(provider, providerId);
       if (!user) {
         throw new Error('Could not create or retrieve the social account');
       }

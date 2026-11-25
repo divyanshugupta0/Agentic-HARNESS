@@ -27,6 +27,7 @@ function createSocialLoginHandler({
       response = await fetchImpl(new URL('/auth/desktop/start', baseUrl), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ provider }),
         signal: AbortSignal.timeout(3000)
       });
@@ -55,6 +56,7 @@ function createSocialLoginHandler({
         pollResponse = await fetchImpl(new URL('/auth/desktop/poll', baseUrl), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ ticket })
         });
       } catch {
