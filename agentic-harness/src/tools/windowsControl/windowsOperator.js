@@ -5,44 +5,32 @@
  * application launching/closing, window management, screen perception, and text-to-speech.
  */
 
-const { spawn, execSync } = require('child_process');
+const { execSync } = require('child_process');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+const { runPowerShell: runPersistentPowerShell } = require('./robot');
 
 const isWindows = process.platform === 'win32';
+let operatorCoreCompiled = false;
 
 /**
- * Execute PowerShell script returning string output
+ * Execute PowerShell script via shared persistent worker (compiles Win32 types once)
  */
-function runPowerShell(script) {
-  return new Promise((resolve, reject) => {
-    if (!isWindows) {
-      return reject(new Error('Windows Operator requires Windows OS.'));
+async function runPowerShell(script) {
+  if (!isWindows) {
+    throw new Error('Windows Operator requires Windows OS.');
+  }
+  const hasCore = script.includes('public class WinHumanCore');
+  let payload = script;
+  if (hasCore) {
+    if (operatorCoreCompiled) {
+      payload = script.replace(WIN32_OPERATOR_CORE, '');
+    } else {
+      operatorCoreCompiled = true;
     }
-
-    const ps = spawn('powershell.exe', [
-      '-NoProfile',
-      '-NonInteractive',
-      '-ExecutionPolicy', 'Bypass',
-      '-Command', script
-    ]);
-
-    let stdout = '';
-    let stderr = '';
-
-    ps.stdout.on('data', data => { stdout += data.toString(); });
-    ps.stderr.on('data', data => { stderr += data.toString(); });
-
-    ps.on('close', code => {
-      if (code !== 0 && stderr.trim().length > 0) {
-        return reject(new Error(`Windows Operator error: ${stderr.trim()}`));
-      }
-      resolve(stdout.trim());
-    });
-
-    ps.on('error', err => reject(err));
-  });
+  }
+  return await runPersistentPowerShell(payload);
 }
 
 // C# Win32 User32 & GDI interop definition
@@ -279,7 +267,9 @@ async function scroll(direction = 'down', clicks = 3) {
  * @param {...string} keys - e.g. ('win', 'r') or ('ctrl', 'shift', 'esc')
  */
 async function pressHotkey(...keys) {
-  const keyList = keys.flat().map(k => String(k).toLowerCase());
+  const keyList = keys
+    .flat(Infinity)
+    .flatMap((k) => String(k).toLowerCase().split('+').map((s) => s.trim()).filter(Boolean));
   const vkCodes = keyList.map(k => VK_MAP[k]).filter(Boolean);
 
   if (vkCodes.length === 0) {
@@ -364,13 +354,35 @@ const openTaskManager = async () => pressHotkey('ctrl', 'shift', 'esc');
  * @param {string} appNameOrPath - e.g. 'notepad', 'chrome', 'calc', 'explorer', 'cmd', or full path
  * @param {string} [args=''] - Command line arguments
  */
+const UWP_URI_ALIASES = {
+  whatsapp: 'whatsapp:',
+  spotify: 'spotify:',
+  settings: 'ms-settings:',
+  calculator: 'calc:',
+  store: 'ms-windows-store:',
+  mail: 'mailto:',
+  calendar: 'outlookcal:'
+};
+
 async function launchApp(appNameOrPath, args = '') {
+  if (Array.isArray(appNameOrPath)) appNameOrPath = appNameOrPath[0];
+  if (appNameOrPath && typeof appNameOrPath === 'object') {
+    appNameOrPath = appNameOrPath.name || appNameOrPath.app || appNameOrPath.path || '';
+  }
+  const rawName = String(appNameOrPath || '').trim();
+  if (!rawName) {
+    throw new Error('Application name or path is required');
+  }
+  const mapped = UWP_URI_ALIASES[rawName.toLowerCase()] || rawName;
+  const safePath = mapped.replace(/"/g, '`"');
+  const argPart = args ? ` -ArgumentList "${String(args).replace(/"/g, '`"')}"` : '';
   const script = `
-    Start-Process -FilePath "${appNameOrPath.replace(/"/g, '`"')}" -ArgumentList "${args.replace(/"/g, '`"')}" -ErrorAction Stop;
+    Start-Process -FilePath "${safePath}"${argPart} -ErrorAction Stop;
+    Start-Sleep -Milliseconds 900;
     Write-Output "LAUNCHED";
   `;
   await runPowerShell(script);
-  return { success: true, app: appNameOrPath };
+  return { success: true, app: mapped };
 }
 
 /**
@@ -474,14 +486,68 @@ async function seeScreen(outputPath = null) {
     $bmp = New-Object System.Drawing.Bitmap($bounds.Width, $bounds.Height);
     $g = [System.Drawing.Graphics]::FromImage($bmp);
     $g.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size);
+
+    # Offscreen pixel coordinate grid + cursor crosshair (visible only to AI, never on user screen)
+    $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias;
+    $minorPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(45, 0, 229, 255), 1);
+    $majorPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(115, 0, 229, 255), 1.5);
+    $font = New-Object System.Drawing.Font("Consolas", 9, [System.Drawing.FontStyle]::Bold);
+    $bgBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(175, 10, 14, 24));
+    $txtBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(240, 56, 232, 255));
+
+    for ($x = 100; $x -lt $bounds.Width; $x += 100) {
+      if ($x % 200 -eq 0) {
+        $g.DrawLine($majorPen, $x, 0, $x, $bounds.Height);
+        $g.FillRectangle($bgBrush, $x + 2, 2, 36, 14);
+        $g.DrawString("$x", $font, $txtBrush, $x + 3, 2);
+      } else {
+        $g.DrawLine($minorPen, $x, 0, $x, $bounds.Height);
+      }
+    }
+    for ($y = 100; $y -lt $bounds.Height; $y += 100) {
+      if ($y % 200 -eq 0) {
+        $g.DrawLine($majorPen, 0, $y, $bounds.Width, $y);
+        $g.FillRectangle($bgBrush, 2, $y + 2, 36, 14);
+        $g.DrawString("$y", $font, $txtBrush, 3, $y + 2);
+      } else {
+        $g.DrawLine($minorPen, 0, $y, $bounds.Width, $y);
+      }
+    }
+
+    $cur = [System.Windows.Forms.Cursor]::Position;
+    $curPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(235, 255, 59, 92), 2);
+    $curBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 255, 214, 10));
+    $g.DrawEllipse($curPen, $cur.X - 10, $cur.Y - 10, 20, 20);
+    $g.DrawLine($curPen, $cur.X - 16, $cur.Y, $cur.X + 16, $cur.Y);
+    $g.DrawLine($curPen, $cur.X, $cur.Y - 16, $cur.X, $cur.Y + 16);
+    $curLabel = "CURSOR($($cur.X),$($cur.Y))";
+    $g.FillRectangle($bgBrush, [Math]::Min($cur.X + 12, $bounds.Width - 135), [Math]::Max(4, $cur.Y - 20), 130, 16);
+    $g.DrawString($curLabel, $font, $curBrush, [Math]::Min($cur.X + 14, $bounds.Width - 133), [Math]::Max(4, $cur.Y - 19));
+
+    $minorPen.Dispose(); $majorPen.Dispose(); $curPen.Dispose();
+    $font.Dispose(); $bgBrush.Dispose(); $txtBrush.Dispose(); $curBrush.Dispose();
+
     $bmp.Save('${targetPath.replace(/\\/g, '\\\\')}', [System.Drawing.Imaging.ImageFormat]::Png);
     $g.Dispose();
     $bmp.Dispose();
-    Write-Output "$($bounds.Width),$($bounds.Height)";
+    Write-Output "$($bounds.Width),$($bounds.Height),$($cur.X),$($cur.Y)";
   `;
   const output = await runPowerShell(script);
-  const [w, h] = output.split(',').map(n => parseInt(n.trim(), 10));
-  return { path: path.resolve(targetPath), width: w || 1920, height: h || 1080 };
+  const [w, h, cx, cy] = output.split(',').map(n => parseInt(n.trim(), 10));
+  const resolvedPath = path.resolve(targetPath);
+  let base64 = '';
+  try {
+    base64 = fs.readFileSync(resolvedPath).toString('base64');
+  } catch (_) {}
+  return {
+    path: resolvedPath,
+    width: w || 1920,
+    height: h || 1080,
+    cursor: { x: Number.isFinite(cx) ? cx : 0, y: Number.isFinite(cy) ? cy : 0 },
+    pixelGrid: '100px minor / 200px labeled major',
+    mimeType: 'image/png',
+    base64
+  };
 }
 
 /**
@@ -584,7 +650,9 @@ module.exports = {
 
   // Keyboard & Hotkeys
   type,
+  typeString: type,
   pressHotkey,
+  keyTap: pressHotkey,
   openStartMenu,
   openRunDialog,
   showDesktop,
@@ -602,6 +670,7 @@ module.exports = {
   closeWindow,
   setWindowState,
   switchWindow,
+  focusWindow: switchWindow,
 
   // Perception
   seeScreen,

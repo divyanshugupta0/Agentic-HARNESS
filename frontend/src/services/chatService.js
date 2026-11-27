@@ -1,82 +1,55 @@
 /**
  * Agentic Harness — Chat & Conversation Service
- * Manages conversation history, message streaming, and agent task execution.
+ * Manages conversation history, real execution flow, and authentic diagnostic reporting.
  */
 
-import { api } from './api';
+import { api } from './api.js';
+import { providerService } from './providerService.js';
+import { fileService } from './fileService.js';
+import { createDiagnostic, ERROR_CATEGORIES } from '../utils/diagnostics.js';
+import { buildToolSystemPrompt, parseToolCalls, stripToolCallBlocks } from '../utils/toolLoop.js';
 
+const API_BASE_URL = (import.meta?.env?.VITE_AUTH_API_URL || 'http://localhost:3002').replace(/\/$/, '');
 const CHAT_STORAGE_KEY = 'agentic_harness_conversations';
 const ACTIVE_CONV_KEY = 'agentic_harness_active_conv';
-
-const INITIAL_CONVERSATIONS = [
-  {
-    id: 'conv-1',
-    title: 'Analyze repository architecture',
-    updatedAt: new Date().toISOString(),
-    messages: [
-      {
-        id: 'msg-1',
-        role: 'user',
-        content: 'Analyze repository architecture and suggest optimization paths for Agentic Harness',
-        timestamp: new Date(Date.now() - 3600000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      },
-      {
-        id: 'msg-2',
-        role: 'assistant',
-        content: `I've analyzed the Agentic Harness repository structure.\n\n### Key Architectural Insights:\n1. **Core Decoupling**: The Electron main process maintains isolated IPC channels with the Vite-powered React UI.\n2. **Tool Sandboxing**: Execution tools (\`fsTool\`, \`shellTool\`) operate under explicit allowlists to prevent unauthorized privilege escalation.\n3. **Memory Layer**: Short-term conversational context is paired with the local vector store for scalable multi-turn reasoning.\n\nAll security boundaries are properly enforced.`,
-        thinking: `Examining file system layout...\nChecking IPC definitions in ipcHandlers.js...\nVerifying preload contextBridge whitelist...\nFound 3 active tools: fsTool, shellTool, httpTool.\nSynthesizing architectural recommendations.`,
-        executionSteps: [
-          'Initialised agent [research-agent] with tools [fsTool, shellTool, httpTool]',
-          'Inspected project structure and module dependencies',
-          'Verified IPC bridge security boundaries'
-        ],
-        timestamp: new Date(Date.now() - 3500000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
-    ]
-  },
-  {
-    id: 'conv-2',
-    title: 'Scan local files for security leaks',
-    updatedAt: new Date(Date.now() - 86400000).toISOString(),
-    messages: [
-      {
-        id: 'msg-3',
-        role: 'user',
-        content: 'Scan local files for security vulnerabilities and secret leaks',
-        timestamp: 'Yesterday 4:15 PM'
-      },
-      {
-        id: 'msg-4',
-        role: 'assistant',
-        content: 'Security scan complete. Scanned 42 source files. No sensitive credentials or API keys were detected in the tracked code.',
-        thinking: 'Scanning for regex patterns matching sk-*, private keys, and credential variables...',
-        executionSteps: ['Scanned directory tree', 'Zero credential leaks identified'],
-        timestamp: 'Yesterday 4:16 PM'
-      }
-    ]
-  }
-];
 
 class ChatService {
   constructor() {
     this.conversations = this.loadConversations();
     this.activeConversationId = this.loadActiveConversationId();
+    this.activeAbortController = null;
+    this.activeTarget = providerService.getActiveTarget();
+    providerService.subscribe(() => {
+      this.activeTarget = providerService.getActiveTarget();
+    });
+  }
+
+  abortActiveRun() {
+    if (this.activeAbortController) {
+      try {
+        this.activeAbortController.abort();
+      } catch (_) {}
+      this.activeAbortController = null;
+    }
   }
 
   loadConversations() {
     try {
+      if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') return [];
       const stored = localStorage.getItem(CHAT_STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {
       console.warn('Failed to load conversations from storage', e);
     }
-    return INITIAL_CONVERSATIONS;
+    return [];
   }
 
   saveConversations() {
     try {
+      if (typeof localStorage === 'undefined' || typeof localStorage.setItem !== 'function') return;
       localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(this.conversations));
       if (this.activeConversationId) {
         localStorage.setItem(ACTIVE_CONV_KEY, this.activeConversationId);
@@ -87,10 +60,13 @@ class ChatService {
   }
 
   loadActiveConversationId() {
-    const saved = localStorage.getItem(ACTIVE_CONV_KEY);
-    if (saved && this.conversations.find((c) => c.id === saved)) {
-      return saved;
-    }
+    try {
+      if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') return null;
+      const saved = localStorage.getItem(ACTIVE_CONV_KEY);
+      if (saved && this.conversations.find((c) => c.id === saved)) {
+        return saved;
+      }
+    } catch (_) {}
     return this.conversations[0]?.id || null;
   }
 
@@ -137,10 +113,7 @@ class ChatService {
     }
   }
 
-  /**
-   * Execute an agent prompt in the active conversation
-   */
-  async sendMessage(content, { modelId = 'claude-3-7-sonnet', tools = [], onUpdate } = {}) {
+  async sendMessage(content, { modelId = null, tools = [], images = [], files = [], onUpdate } = {}) {
     let conv = this.getActiveConversation();
     if (!conv) {
       conv = this.createNewConversation(content.slice(0, 36) || 'New Chat');
@@ -152,6 +125,10 @@ class ChatService {
       id: 'msg-' + Date.now(),
       role: 'user',
       content,
+      attachments: [
+        ...(images || []).map((img) => ({ kind: 'image', name: img.name, size: img.size, dataUrl: img.dataUrl })),
+        ...(files || []).map((f) => ({ kind: 'file', name: f.name, size: f.size }))
+      ],
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
@@ -160,11 +137,51 @@ class ChatService {
     this.saveConversations();
     if (onUpdate) onUpdate(conv);
 
+    const target =
+      this.activeTarget && (!modelId || this.activeTarget.model?.id === modelId)
+        ? this.activeTarget
+        : providerService.getActiveTarget(modelId);
+
+    if (!target || !target.provider || !target.model) {
+      const hasProvider = providerService.hasConfiguredProvider();
+      const diagnostic = createDiagnostic(
+        new Error(
+          hasProvider
+            ? modelId
+              ? `No configured provider owns model "${modelId}".`
+              : 'No model or provider configured.'
+            : 'No AI provider configured in workspace.'
+        ),
+        {
+          hasProvider,
+          category: hasProvider
+            ? ERROR_CATEGORIES.MISSING_CONFIGURATION
+            : ERROR_CATEGORIES.PROVIDER_NOT_CONFIGURED
+        }
+      );
+
+      const assistantMessage = {
+        id: 'msg-assist-' + Date.now(),
+        role: 'assistant',
+        content: `**${diagnostic.title}**\n\n${diagnostic.message}\n\n> ${diagnostic.suggestion}`,
+        diagnostic,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isExecuting: false,
+        isError: true
+      };
+
+      conv.messages.push(assistantMessage);
+      this.saveConversations();
+      if (onUpdate) onUpdate(conv);
+      return assistantMessage;
+    }
+
     const assistantMessage = {
       id: 'msg-assist-' + Date.now(),
       role: 'assistant',
       content: '',
-      thinking: 'Decomposing task and initializing agent tools...',
+      thinking: '',
+      blocks: [],
       executionSteps: [],
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isExecuting: true
@@ -173,40 +190,326 @@ class ChatService {
     conv.messages.push(assistantMessage);
     if (onUpdate) onUpdate(conv);
 
-    // Call Electron main process IPC (or browser mock)
+    this.abortActiveRun();
+    const abortController = new AbortController();
+    this.activeAbortController = abortController;
+
     try {
-      await api.send('agent:start', content);
-    } catch (e) {
-      console.warn('Agent start IPC notice:', e);
+      const activeProject = fileService.getProjectRoot();
+      if (activeProject?.path) {
+        await api.send('project:set-cwd', { path: activeProject.path }).catch(() => {});
+      }
+
+      const baseHistory = conv.messages
+        .filter((m) => !m.isExecuting && !m.isError && m.content)
+        .slice(-16)
+        .map((m) => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: m.content
+        }));
+
+      const loopMessages = [
+        { role: 'system', content: buildToolSystemPrompt(tools, activeProject) },
+        ...baseHistory
+      ];
+
+      const maxToolTurns = 10;
+      let pendingTurnImages = [];
+
+      for (let turn = 0; turn < maxToolTurns; turn++) {
+        if (abortController.signal.aborted) break;
+
+        const turnImages = turn === 0 ? images : pendingTurnImages;
+        pendingTurnImages = [];
+
+        const isFinalSynthesisTurn = turn === maxToolTurns - 1;
+        if (isFinalSynthesisTurn) {
+          loopMessages.push({
+            role: 'user',
+            content: 'Provide your final answer to the user now based on the tool results above. Do not emit any more tool_call blocks.'
+          });
+        }
+        const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: abortController.signal,
+          body: JSON.stringify({
+            provider: {
+              type: target.provider.type,
+              baseURL: target.provider.baseURL,
+              apiKey: target.apiKey
+            },
+            model: target.model.id,
+            messages: loopMessages,
+            images: turnImages,
+            files: turn === 0 ? files : []
+          })
+        });
+
+        if (!response.ok) {
+          const errPayload = await response.json().catch(() => ({}));
+          throw new Error(errPayload.error || `Model request failed with HTTP ${response.status}`);
+        }
+
+        let turnRawText = '';
+        let turnThinkingText = '';
+        let turnThinkingBlock = null;
+        let turnTextBlock = null;
+
+        const ensureThinkingBlock = () => {
+          if (!turnThinkingBlock) {
+            turnThinkingBlock = { type: 'thinking', text: '' };
+            assistantMessage.blocks.push(turnThinkingBlock);
+          }
+          return turnThinkingBlock;
+        };
+
+        const ensureTextBlock = () => {
+          if (!turnTextBlock) {
+            turnTextBlock = { type: 'text', text: '' };
+            assistantMessage.blocks.push(turnTextBlock);
+          }
+          return turnTextBlock;
+        };
+
+        if (response.body && typeof response.body.getReader === 'function') {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          const syncTurnOutput = (text) => {
+            const openIdx = text.indexOf('<think>');
+            let visible = text;
+            if (openIdx !== -1) {
+              const closeIdx = text.indexOf('</think>', openIdx + 7);
+              if (closeIdx === -1) {
+                const t = stripToolCallBlocks(text.slice(openIdx + 7));
+                if (t) ensureThinkingBlock().text = t;
+                visible = text.slice(0, openIdx);
+              } else {
+                const t = stripToolCallBlocks(text.slice(openIdx + 7, closeIdx));
+                if (t) ensureThinkingBlock().text = t;
+                visible = (text.slice(0, openIdx) + text.slice(closeIdx + 8)).trimStart();
+              }
+            }
+            const cleanVisible = stripToolCallBlocks(visible);
+            if (cleanVisible) {
+              ensureTextBlock().text = cleanVisible;
+            }
+            assistantMessage.content = assistantMessage.blocks
+              .filter((b) => b.type === 'text')
+              .map((b) => b.text)
+              .join('\n\n');
+            assistantMessage.thinking = assistantMessage.blocks
+              .filter((b) => b.type === 'thinking')
+              .map((b) => b.text)
+              .join('\n\n');
+          };
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split(/\r?\n/);
+            buffer = lines.pop() || '';
+
+            for (const rawLine of lines) {
+              const line = rawLine.trim();
+              if (!line.startsWith('data:')) continue;
+              const jsonStr = line.slice(5).trim();
+              if (!jsonStr) continue;
+
+              const evt = JSON.parse(jsonStr);
+              if (evt.error) throw new Error(evt.error);
+              if (evt.thinkingDelta) {
+                turnThinkingText += evt.thinkingDelta;
+                const cleanThink = stripToolCallBlocks(turnThinkingText);
+                if (cleanThink) {
+                  ensureThinkingBlock().text = cleanThink;
+                  assistantMessage.thinking = assistantMessage.blocks
+                    .filter((b) => b.type === 'thinking')
+                    .map((b) => b.text)
+                    .join('\n\n');
+                }
+                if (onUpdate) onUpdate(conv);
+              }
+              if (evt.delta) {
+                turnRawText += evt.delta;
+                syncTurnOutput(turnRawText);
+                if (onUpdate) onUpdate(conv);
+              }
+            }
+          }
+        } else {
+          const result = await response.json().catch(() => ({}));
+          if (!result.success) throw new Error(result.error || 'Model request failed');
+          turnRawText = result.content || '';
+          const clean = stripToolCallBlocks(turnRawText);
+          if (clean) {
+            ensureTextBlock().text = clean;
+            assistantMessage.content = assistantMessage.blocks
+              .filter((b) => b.type === 'text')
+              .map((b) => b.text)
+              .join('\n\n');
+          }
+        }
+
+        const rawCalls = parseToolCalls(turnRawText);
+        const toolCalls = rawCalls.length > 0 ? rawCalls : parseToolCalls(turnThinkingText);
+        if (toolCalls.length === 0) {
+          if (!assistantMessage.content && !isFinalSynthesisTurn) {
+            if (turnImages.length > 0 && !turnRawText && !turnThinkingText) {
+              loopMessages.push({
+                role: 'user',
+                content: 'Note: your model did not return output for the screenshot image. Use ghost.inspectElements() or keyboard shortcuts (pressHotkey, type, keyTap) instead of relying on screenshots, and continue completing the user task.'
+              });
+              continue;
+            }
+            if (turnThinkingText) {
+              loopMessages.push({
+                role: 'user',
+                content: 'Output ONLY your ```tool_call JSON block or your concise final answer now.'
+              });
+              continue;
+            }
+          }
+          break;
+        }
+
+        const UI_SEQUENTIAL_TOOLS = new Set(['robot', 'windowsOperator', 'ghost', 'playwright', 'browserUse', 'stagehand']);
+        const hasSequentialUi = toolCalls.some((c) => UI_SEQUENTIAL_TOOLS.has(c.tool));
+        const toolResultSummaries = [];
+        let mutatedFiles = false;
+
+        const runSingleTool = async (toolCall) => {
+          if (toolCall.tool === 'projectTool') {
+            const suggestedPath = typeof toolCall.params?.[0] === 'string' ? toolCall.params[0] : '';
+            const reason = typeof toolCall.params?.[1] === 'string' ? toolCall.params[1] : '';
+            assistantMessage.actionRequest = {
+              type: 'open-project',
+              path: suggestedPath,
+              reason
+            };
+            const stepLabel = `projectTool.askOpenProject${suggestedPath ? `("${suggestedPath}")` : ''} → prompt shown`;
+            assistantMessage.blocks.push({ type: 'tool', label: stepLabel, status: 'ok' });
+            assistantMessage.executionSteps.push(stepLabel);
+            if (onUpdate) onUpdate(conv);
+            return '[Tool Result for projectTool.askOpenProject]\nDisplayed an "Open Project" button below your message.';
+          }
+
+          const toolBlock = {
+            type: 'tool',
+            label: `${toolCall.tool}.${toolCall.action}(${JSON.stringify(toolCall.params).slice(1, -1)})`,
+            status: 'running'
+          };
+          assistantMessage.blocks.push(toolBlock);
+          assistantMessage.executionSteps.push(toolBlock.label);
+          if (onUpdate) onUpdate(conv);
+
+          const toolRes = await api.send('tool:execute', toolCall).catch((e) => ({
+            success: false,
+            error: e.message
+          }));
+
+          const rawResult = toolRes?.result ?? toolRes;
+          if (toolRes?.success && rawResult && typeof rawResult === 'object') {
+            const b64 = rawResult.base64 || rawResult.imageBase64 || rawResult.screenshot;
+            if (typeof b64 === 'string' && b64.length > 100) {
+              const cleanB64 = b64.includes(',') ? b64.split(',')[1] : b64;
+              pendingTurnImages.push({
+                mimeType: rawResult.mimeType || 'image/png',
+                data: cleanB64
+              });
+            }
+          }
+
+          const sanitizedPayload = toolRes?.success
+            ? JSON.stringify(rawResult, (key, val) => {
+                if (
+                  typeof val === 'string' &&
+                  val.length > 500 &&
+                  (['base64', 'imageBase64', 'screenshot', 'dataUrl', 'audioBase64'].includes(key) ||
+                    val.startsWith('data:image/'))
+                ) {
+                  return `[omitted ${key} (${val.length} chars)]`;
+                }
+                return val;
+              })
+            : `Error: ${toolRes?.error || 'Tool execution failed'}`;
+          const resultSummary = sanitizedPayload.length > 6000
+            ? `${sanitizedPayload.slice(0, 4500)}\n...[truncated]...\n${sanitizedPayload.slice(-1000)}`
+            : sanitizedPayload;
+
+          toolBlock.status = toolRes?.success ? 'ok' : 'failed';
+          toolBlock.label = `${toolCall.tool}.${toolCall.action} → ${toolRes?.success ? 'ok' : 'failed'}`;
+          assistantMessage.executionSteps[assistantMessage.executionSteps.length - 1] = toolBlock.label;
+          if (onUpdate) onUpdate(conv);
+
+          if (
+            toolRes?.success &&
+            toolCall.tool === 'fsTool' &&
+            ['writeFile', 'appendFile', 'deleteFile', 'createDirectory'].includes(toolCall.action)
+          ) {
+            mutatedFiles = true;
+          }
+
+          return `[Tool Result for ${toolCall.tool}.${toolCall.action}]\n${resultSummary}`;
+        };
+
+        if (hasSequentialUi || toolCalls.length === 1) {
+          for (const tc of toolCalls) {
+            if (abortController.signal.aborted) break;
+            toolResultSummaries.push(await runSingleTool(tc));
+          }
+        } else {
+          const results = await Promise.all(toolCalls.map((tc) => runSingleTool(tc)));
+          toolResultSummaries.push(...results);
+        }
+
+        if (mutatedFiles && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('workspace:refresh-project'));
+        }
+
+        const cleanTurnAssistant = turnRawText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim() || '(tool_call)';
+        loopMessages.push({ role: 'assistant', content: cleanTurnAssistant });
+        loopMessages.push({
+          role: 'user',
+          content: toolResultSummaries.join('\n\n')
+        });
+      }
+
+      this.activeAbortController = null;
+      assistantMessage.isExecuting = false;
+      if (!assistantMessage.content) {
+        const fallback =
+          assistantMessage.executionSteps.length > 0
+            ? `Completed:\n${assistantMessage.executionSteps.map((s) => `- ${s}`).join('\n')}`
+            : '(No response returned by model)';
+        assistantMessage.content = fallback;
+        assistantMessage.blocks.push({ type: 'text', text: fallback });
+      }
+    } catch (err) {
+      this.activeAbortController = null;
+      assistantMessage.isExecuting = false;
+      if (err?.name === 'AbortError') {
+        if (!assistantMessage.content) {
+          const stoppedMsg = '*Generation stopped by user.*';
+          assistantMessage.content = stoppedMsg;
+          assistantMessage.blocks.push({ type: 'text', text: stoppedMsg });
+        }
+      } else {
+        assistantMessage.isError = true;
+        assistantMessage.diagnostic = createDiagnostic(err, { hasProvider: true });
+        assistantMessage.content = `**${assistantMessage.diagnostic.title}**\n\n${assistantMessage.diagnostic.message}\n\n> ${assistantMessage.diagnostic.suggestion}`;
+        assistantMessage.blocks.push({ type: 'text', text: assistantMessage.content });
+      }
     }
-
-    // Progressively stream agent thinking and simulated execution trace
-    const steps = [
-      `🤖 Initialized agent with tools: [${tools.length ? tools.join(', ') : 'fsTool, shellTool, httpTool'}]`,
-      `🧠 Short-term memory store active. Goal recorded: "${content}"`,
-      `📋 Generating multi-step execution plan with model ${modelId}...`,
-      `[Step 1/3] Validating local workspace environment & security sandbox`,
-      `[Step 2/3] Analyzing objective and inspecting relevant file structures...`,
-      `[Step 3/3] Synthesizing reasoning trace and verifying completion metrics...`
-    ];
-
-    for (let i = 0; i < steps.length; i++) {
-      await new Promise((r) => setTimeout(r, 400));
-      assistantMessage.executionSteps.push(steps[i]);
-      assistantMessage.thinking += `\n→ ${steps[i]}`;
-      if (onUpdate) onUpdate(conv);
-    }
-
-    await new Promise((r) => setTimeout(r, 350));
-    assistantMessage.isExecuting = false;
-    assistantMessage.content = `I have completed the requested mission: **"${content}"**.\n\n### Summary of Execution:\n- **Model Selected**: \`${modelId}\`\n- **Active Tools**: ${tools.length ? tools.map(t => '`' + t + '`').join(', ') : '`fsTool`, `shellTool`, `httpTool`'}\n- **Outcome**: Successfully verified local workspace bounds and generated the actionable execution plan.\n\nYou can continue refining the task or navigate to the **Files** tab to review generated artifacts.`;
 
     this.saveConversations();
     if (onUpdate) onUpdate(conv);
-
     return assistantMessage;
   }
 }
 
 export const chatService = new ChatService();
-

@@ -1,13 +1,16 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { TABS } from '../constants/navigation';
 import { fileService } from '../services/fileService';
+import { api } from '../services/api';
 
 const WorkspaceContext = createContext(null);
 
 export function WorkspaceProvider({ children }) {
   const [currentTab, setCurrentTab] = useState(TABS.CHAT);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isLiveAudioOpen, setIsLiveAudioOpen] = useState(false);
   const [files, setFiles] = useState(() => fileService.getFiles());
+  const [projectRoot, setProjectRoot] = useState(() => fileService.getProjectRoot());
   const [openFileTabs, setOpenFileTabs] = useState(() => fileService.getOpenFileTabs());
   const [activeFile, setActiveFile] = useState(() => fileService.getActiveFile());
   const [recentlyModified, setRecentlyModified] = useState(() => fileService.getRecentlyModified());
@@ -15,6 +18,9 @@ export function WorkspaceProvider({ children }) {
   const toggleSidebar = () => {
     setIsSidebarCollapsed((prev) => !prev);
   };
+
+  const openLiveAudio = () => setIsLiveAudioOpen(true);
+  const closeLiveAudio = () => setIsLiveAudioOpen(false);
 
   const openFile = (id) => {
     const file = fileService.openFile(id);
@@ -66,6 +72,64 @@ export function WorkspaceProvider({ children }) {
     setRecentlyModified(fileService.getRecentlyModified());
   };
 
+  const applyLoadedProject = (res) => {
+    if (!res || !res.success || !Array.isArray(res.files)) return false;
+    const updated = fileService.setProjectFiles({
+      projectPath: res.projectPath,
+      projectName: res.projectName,
+      files: res.files
+    });
+    setProjectRoot(updated.projectRoot);
+    setFiles([...updated.files]);
+    setOpenFileTabs(fileService.getOpenFileTabs());
+    setActiveFile(updated.activeFile);
+    setRecentlyModified(fileService.getRecentlyModified());
+    setCurrentTab(TABS.FILES);
+    return true;
+  };
+
+  const openProjectFolder = async (folderPath = '') => {
+    try {
+      const res = folderPath
+        ? await api.send('project:read-folder', { path: folderPath })
+        : await api.send('dialog:open-project');
+      return applyLoadedProject(res);
+    } catch (err) {
+      console.error('Failed to open project folder:', err);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    const syncProjectOnMount = async () => {
+      const root = fileService.getProjectRoot();
+      if (root?.path) {
+        await api.send('project:set-cwd', { path: root.path }).catch(() => {});
+      }
+    };
+    syncProjectOnMount();
+
+    const onRefresh = async () => {
+      const root = fileService.getProjectRoot();
+      if (!root?.path) return;
+      try {
+        const res = await api.send('project:read-folder', { path: root.path });
+        if (res?.success && Array.isArray(res.files)) {
+          const updated = fileService.setProjectFiles({
+            projectPath: res.projectPath,
+            projectName: res.projectName,
+            files: res.files
+          });
+          setFiles([...updated.files]);
+          setOpenFileTabs(fileService.getOpenFileTabs());
+          setRecentlyModified(fileService.getRecentlyModified());
+        }
+      } catch (_) {}
+    };
+    window.addEventListener('workspace:refresh-project', onRefresh);
+    return () => window.removeEventListener('workspace:refresh-project', onRefresh);
+  }, []);
+
   return (
     <WorkspaceContext.Provider
       value={{
@@ -73,7 +137,12 @@ export function WorkspaceProvider({ children }) {
         setCurrentTab,
         isSidebarCollapsed,
         toggleSidebar,
+        isLiveAudioOpen,
+        setIsLiveAudioOpen,
+        openLiveAudio,
+        closeLiveAudio,
         files,
+        projectRoot,
         openFileTabs,
         activeFile,
         recentlyModified,
@@ -82,7 +151,8 @@ export function WorkspaceProvider({ children }) {
         updateFileContent,
         saveActiveFile,
         createFile,
-        deleteFile
+        deleteFile,
+        openProjectFolder
       }}
     >
       {children}

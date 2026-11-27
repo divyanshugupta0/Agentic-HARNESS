@@ -20,36 +20,107 @@ try {
 const isWindows = process.platform === 'win32';
 
 /**
- * Execute a PowerShell script synchronously or asynchronously
+ * Persistent PowerShell worker so Add-Type / Win32 APIs compile once
+ * and subsequent mouse/keyboard calls execute in milliseconds.
  */
-function runPowerShell(script) {
-  return new Promise((resolve, reject) => {
-    if (!isWindows) {
-      return reject(new Error('Native desktop automation driver currently requires Windows OS.'));
-    }
+let psWorker = null;
+let psWorkerInitialized = false;
+let psQueue = Promise.resolve();
+let psCmdCounter = 0;
 
-    const ps = spawn('powershell.exe', [
-      '-NoProfile',
-      '-NonInteractive',
-      '-ExecutionPolicy', 'Bypass',
-      '-Command', script
-    ]);
-
-    let stdout = '';
-    let stderr = '';
-
-    ps.stdout.on('data', data => { stdout += data.toString(); });
-    ps.stderr.on('data', data => { stderr += data.toString(); });
-
-    ps.on('close', code => {
-      if (code !== 0 && stderr.trim().length > 0) {
-        return reject(new Error(`PowerShell automation failed: ${stderr.trim()}`));
-      }
-      resolve(stdout.trim());
-    });
-
-    ps.on('error', err => reject(err));
+function getOrStartWorker() {
+  if (psWorker && !psWorker.killed && psWorker.exitCode === null) {
+    return psWorker;
+  }
+  psWorkerInitialized = false;
+  psWorker = spawn('powershell.exe', [
+    '-NoProfile',
+    '-NoLogo',
+    '-ExecutionPolicy', 'Bypass',
+    '-Command', '-'
+  ], {
+    windowsHide: true,
+    stdio: ['pipe', 'pipe', 'pipe']
   });
+  psWorker.on('exit', () => {
+    psWorker = null;
+    psWorkerInitialized = false;
+  });
+  psWorker.on('error', () => {
+    psWorker = null;
+    psWorkerInitialized = false;
+  });
+  return psWorker;
+}
+
+function execOnWorker(script) {
+  return new Promise((resolve, reject) => {
+    const worker = getOrStartWorker();
+    const id = ++psCmdCounter;
+    const endMarker = `__ROBOT_DONE_${id}__`;
+    const errMarker = `__ROBOT_ERR_${id}__`;
+
+    let outBuf = '';
+    let errBuf = '';
+    let settled = false;
+
+    const cleanup = () => {
+      worker.stdout.off('data', onOut);
+      worker.stderr.off('data', onErr);
+      worker.off('exit', onExit);
+    };
+
+    const onOut = (chunk) => {
+      outBuf += chunk.toString();
+      const idx = outBuf.indexOf(endMarker);
+      if (idx !== -1 && !settled) {
+        settled = true;
+        cleanup();
+        const result = outBuf.slice(0, idx).trim();
+        if (errBuf.trim() && result.includes(errMarker)) {
+          return reject(new Error(`PowerShell automation failed: ${errBuf.trim()}`));
+        }
+        resolve(result);
+      }
+    };
+
+    const onErr = (chunk) => {
+      errBuf += chunk.toString();
+    };
+
+    const onExit = () => {
+      if (!settled) {
+        settled = true;
+        cleanup();
+        reject(new Error('PowerShell automation worker exited unexpectedly'));
+      }
+    };
+
+    worker.stdout.on('data', onOut);
+    worker.stderr.on('data', onErr);
+    worker.once('exit', onExit);
+
+    const initBlock = !psWorkerInitialized ? `${USER32_TYPE_DEFINITION}\n` : '';
+    psWorkerInitialized = true;
+
+    const cleanScript = script.includes('public class WinRobot')
+      ? script.replace(USER32_TYPE_DEFINITION, '')
+      : script;
+
+    const fullPayload = `${initBlock}try {\n${cleanScript}\n} catch { Write-Error $_; Write-Output "${errMarker}" }`;
+    const b64 = Buffer.from(fullPayload, 'utf16le').toString('base64');
+    const oneLine = `Invoke-Expression ([System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String('${b64}'))); Write-Output '${endMarker}'\n`;
+    worker.stdin.write(oneLine);
+  });
+}
+
+function runPowerShell(script) {
+  if (!isWindows) {
+    return Promise.reject(new Error('Native desktop automation driver currently requires Windows OS.'));
+  }
+  const run = psQueue.then(() => execOnWorker(script));
+  psQueue = run.catch(() => {});
+  return run;
 }
 
 function runPowerShellSync(script) {
@@ -518,6 +589,7 @@ module.exports = {
 
   // Driver metadata
   driver: nativeRobot ? 'native-robotjs' : 'windows-powershell-win32',
-  isNative: !!nativeRobot
+  isNative: !!nativeRobot,
+  runPowerShell
 };
 

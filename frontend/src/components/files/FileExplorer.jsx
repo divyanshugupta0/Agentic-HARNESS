@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Clock } from 'lucide-react';
+import { Plus, Trash2, Clock, FolderOpen, Search } from 'lucide-react';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { getFileIcon } from '../../utils/fileIcons';
 import { formatClockTime } from '../../utils/formatDate';
@@ -7,9 +7,19 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 
 export function FileExplorer() {
-  const { files, activeFile, openFile, createFile, deleteFile, recentlyModified } = useWorkspace();
+  const {
+    files,
+    projectRoot,
+    activeFile,
+    openFile,
+    createFile,
+    deleteFile,
+    recentlyModified,
+    openProjectFolder
+  } = useWorkspace();
   const [isNewFileModalOpen, setIsNewFileModalOpen] = useState(false);
   const [newFileName, setNewFileName] = useState('');
+  const [fileFilter, setFileFilter] = useState('');
 
   const handleCreate = (e) => {
     e.preventDefault();
@@ -23,21 +33,67 @@ export function FileExplorer() {
   return (
     <div className="files-workspace__sidebar" id="files-explorer">
       <div className="files-workspace__sidebar-header">
-        <span className="files-workspace__sidebar-title">Workspace Files</span>
-        <button
-          type="button"
-          className="btn-icon"
-          onClick={() => setIsNewFileModalOpen(true)}
-          title="Create New File"
-          id="files-create-button"
+        <span className="files-workspace__sidebar-title" title={projectRoot?.path || 'Workspace Files'}>
+          {projectRoot ? projectRoot.name : 'Workspace Files'}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <button
+            type="button"
+            className="btn-icon"
+            onClick={() => openProjectFolder()}
+            title="Open Entire Project / Folder"
+            id="files-open-project-btn"
+          >
+            <FolderOpen size={15} />
+          </button>
+          <button
+            type="button"
+            className="btn-icon"
+            onClick={() => setIsNewFileModalOpen(true)}
+            title="Create New File"
+            id="files-create-button"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Quick File Filter */}
+      <div style={{ padding: '8px 10px 4px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 8px',
+            borderRadius: 'var(--radius-sm)',
+            backgroundColor: 'var(--bg-primary)',
+            border: '1px solid var(--border-subtle)'
+          }}
         >
-          <Plus size={16} />
-        </button>
+          <Search size={12} color="var(--text-muted)" />
+          <input
+            type="text"
+            value={fileFilter}
+            onChange={(e) => setFileFilter(e.target.value)}
+            placeholder="Filter project files..."
+            style={{
+              width: '100%',
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              fontSize: '12px',
+              color: 'var(--text-primary)'
+            }}
+          />
+        </div>
       </div>
 
       {/* File Tree */}
       <div className="files-workspace__tree">
-        {files.map((file) => {
+        {files
+          .filter((f) => !fileFilter.trim() || f.name.toLowerCase().includes(fileFilter.trim().toLowerCase()))
+          .map((file) => {
           const isActive = activeFile?.id === file.id;
           return (
             <div

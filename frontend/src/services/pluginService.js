@@ -65,6 +65,68 @@ const INITIAL_PLUGINS = [
     }
   },
   {
+    id: 'plugin-robot',
+    name: 'Windows Desktop Controller (Robot.js)',
+    category: 'Automation',
+    description: 'Autonomous desktop automation: mouse navigation, typing, key combinations, screenshots, and window control.',
+    icon: 'Laptop',
+    version: '1.0.0',
+    installed: true,
+    enabled: true,
+    author: 'Agentic Core Team',
+    config: {
+      enableSmoothMouse: true,
+      captureScreenshots: true
+    }
+  },
+  {
+    id: 'plugin-ghost',
+    name: 'Ghost Background OS Controller',
+    category: 'Automation',
+    description: 'Zero-hijack background automation (NORTHTEKDevs/ghost): UI Automation element inspection, background clicks and value setting without cursor stealing.',
+    icon: 'Bot',
+    version: '1.0.0',
+    installed: true,
+    enabled: true,
+    author: 'NORTHTEKDevs / Agentic Core',
+    config: {
+      enableBackgroundPolicy: true,
+      focusLock: false,
+      sourceRepo: 'https://github.com/NORTHTEKDevs/ghost'
+    }
+  },
+  {
+    id: 'plugin-windows-operator',
+    name: 'Human Windows Operator (Computer Use)',
+    category: 'Automation',
+    description: 'Human-level OS interaction: launch and close applications, hotkeys (Win+R, Alt+Tab, Ctrl+C/V/S), smooth mouse navigation, screen perception, and speech.',
+    icon: 'Laptop',
+    version: '1.0.0',
+    installed: true,
+    enabled: true,
+    author: 'Agentic Core Team',
+    config: {
+      humanMouseSpeed: 1.0,
+      enableSpeech: true
+    }
+  },
+  {
+    id: 'plugin-personaplex',
+    name: 'PersonaPlex Live Audio (Full-Duplex)',
+    category: 'AI Agents',
+    description: 'Natural, simultaneous listening and speaking with real-time barge-in interruption, conversational backchanneling, and hybrid voice/text prompting.',
+    icon: 'Radio',
+    version: '1.0.0',
+    installed: true,
+    enabled: true,
+    author: 'NVIDIA / Agentic Core',
+    config: {
+      duplexMode: 'simultaneous',
+      enableBargeIn: true,
+      enableBackchannels: true
+    }
+  },
+  {
     id: 'plugin-researcher',
     name: 'Autonomous Research Agent',
     category: 'AI Agents',

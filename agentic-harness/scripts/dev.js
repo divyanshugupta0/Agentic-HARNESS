@@ -22,11 +22,23 @@ if (fs.existsSync(frontendDir)) {
 const backendDir = path.resolve(__dirname, '../../backend');
 let authServer = null;
 
+function readBackendEnvPort() {
+  const envPath = path.join(backendDir, '.env');
+  if (!fs.existsSync(envPath)) return null;
+  const match = fs.readFileSync(envPath, 'utf8').match(/^PORT\s*=\s*(\d+)/m);
+  return match ? Number(match[1]) : null;
+}
+
+const authPort = Number(process.env.PORT || readBackendEnvPort() || 3001);
+
 function waitForAuthServer(port, retries, delay) {
   return new Promise((resolve, reject) => {
     function attempt(remaining) {
       http.get(`http://localhost:${port}/health`, (res) => {
-        resolve();
+        res.resume();
+        if (res.statusCode === 200) return resolve();
+        if (remaining <= 0) return reject(new Error(`Auth server returned HTTP ${res.statusCode} on port ${port}`));
+        setTimeout(() => attempt(remaining - 1), delay);
       }).on('error', () => {
         if (remaining <= 0) return reject(new Error(`Auth server did not start on port ${port}`));
         setTimeout(() => attempt(remaining - 1), delay);
@@ -37,12 +49,11 @@ function waitForAuthServer(port, retries, delay) {
 }
 
 if (fs.existsSync(backendDir)) {
-  const authPort = process.env.PORT || 3001;
   console.log(`Starting auth backend on port ${authPort}...`);
   authServer = spawn(process.execPath, ['src/server.js'], {
     cwd: backendDir,
     stdio: 'inherit',
-    env: { ...process.env }
+    env: { ...process.env, PORT: String(authPort) }
   });
   authServer.on('error', (err) => {
     console.warn('Auth server error:', err.message);
@@ -50,7 +61,6 @@ if (fs.existsSync(backendDir)) {
 }
 
 // ─── 3. Launch Electron once auth server is ready ────────────────────────────
-const authPort = process.env.PORT || 3001;
 
 // Wait up to 10 seconds (20 retries × 500ms) for the auth server
 waitForAuthServer(authPort, 20, 500)
@@ -69,6 +79,9 @@ waitForAuthServer(authPort, 20, 500)
     // Crucial: Sanitize environment so Electron runs as GUI application rather than node
     const env = { ...process.env };
     delete env.ELECTRON_RUN_AS_NODE;
+    if (!env.AUTH_API_URL) {
+      env.AUTH_API_URL = `http://localhost:${authPort}`;
+    }
 
     console.log('Launching Agentic Harness Electron Desktop...');
     const electron = spawn(electronBinary, [mainPath], {

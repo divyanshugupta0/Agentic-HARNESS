@@ -10,7 +10,8 @@ import {
   Shield,
   Eye,
   EyeOff,
-  Cpu
+  Cpu,
+  Pencil
 } from 'lucide-react';
 import { providerService, PROVIDER_TEMPLATES } from '../../services/providerService';
 import { Button } from '../common/Button';
@@ -18,10 +19,12 @@ import { Button } from '../common/Button';
 export function ApiProvidersSettings() {
   const [providers, setProviders] = useState(() => providerService.getConfiguredProviders());
   const [isAdding, setIsAdding] = useState(false);
+  const [editingProviderId, setEditingProviderId] = useState(null);
   const [selectedTemplateType, setSelectedTemplateType] = useState('anthropic');
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [customBaseURL, setCustomBaseURL] = useState('');
   const [customName, setCustomName] = useState('');
+  const [customModelsInput, setCustomModelsInput] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [testingId, setTestingId] = useState(null);
   const [testResult, setTestResult] = useState(null); // { providerId, success, message, diagnostic }
@@ -36,16 +39,29 @@ export function ApiProvidersSettings() {
   const activeTemplate = PROVIDER_TEMPLATES.find((t) => t.type === selectedTemplateType) || PROVIDER_TEMPLATES[0];
 
   const handleStartAdd = (templateType) => {
+    setEditingProviderId(null);
     setSelectedTemplateType(templateType || 'anthropic');
     const t = PROVIDER_TEMPLATES.find((x) => x.type === templateType) || PROVIDER_TEMPLATES[0];
     setCustomBaseURL(t.defaultBaseURL);
-    setCustomName(t.name);
+    setCustomName(t.type === 'custom' ? '' : t.name);
+    setCustomModelsInput('');
     setApiKeyInput('');
     setFormError('');
     setIsAdding(true);
   };
 
-  const handleSaveProvider = (e) => {
+  const handleStartEdit = (provider) => {
+    setEditingProviderId(provider.id);
+    setSelectedTemplateType(provider.type);
+    setCustomName(provider.name || '');
+    setCustomBaseURL(provider.baseURL || '');
+    setApiKeyInput(providerService.getApiKey(provider.id) || '');
+    setCustomModelsInput((provider.customModelIds || []).join(', '));
+    setFormError('');
+    setIsAdding(true);
+  };
+
+  const handleSaveProvider = async (e) => {
     e.preventDefault();
     setFormError('');
 
@@ -54,20 +70,44 @@ export function ApiProvidersSettings() {
       return;
     }
 
+    if (activeTemplate.type === 'custom' && !customName.trim()) {
+      setFormError('Please enter a display name for your custom provider.');
+      return;
+    }
+
     try {
-      providerService.addOrUpdateProvider({
+      const saved = providerService.addOrUpdateProvider({
+        id: editingProviderId,
         type: activeTemplate.type,
         name: customName || activeTemplate.name,
         apiKey: apiKeyInput,
-        baseURL: customBaseURL || activeTemplate.defaultBaseURL
+        baseURL: customBaseURL || activeTemplate.defaultBaseURL,
+        customModels: customModelsInput
       });
       setIsAdding(false);
+      setEditingProviderId(null);
       setApiKeyInput('');
+      setCustomModelsInput('');
       setTestResult({
         providerId: null,
         success: true,
-        message: `${customName || activeTemplate.name} successfully connected.`
+        message: `${saved.name} connected. Syncing live models...`
       });
+
+      const syncRes = await providerService.fetchAndSyncModels(saved.id);
+      if (syncRes.success && syncRes.models.length > 0) {
+        setTestResult({
+          providerId: null,
+          success: true,
+          message: `${saved.name} connected. Loaded ${syncRes.models.length} live models.`
+        });
+      } else if (!syncRes.success) {
+        setTestResult({
+          providerId: null,
+          success: false,
+          message: `${saved.name} saved, but live model sync failed: ${syncRes.error}`
+        });
+      }
     } catch (err) {
       setFormError(err.message || 'Failed to save provider configuration.');
     }
@@ -135,11 +175,16 @@ export function ApiProvidersSettings() {
       {isAdding && (
         <div className="api-providers-settings__form-card">
           <div className="api-providers-settings__form-header">
-            <h3 className="api-providers-settings__form-title">Connect AI Provider</h3>
+            <h3 className="api-providers-settings__form-title">
+              {editingProviderId ? 'Edit AI Provider' : 'Connect AI Provider'}
+            </h3>
             <button
               type="button"
               className="btn-icon"
-              onClick={() => setIsAdding(false)}
+              onClick={() => {
+                setIsAdding(false);
+                setEditingProviderId(null);
+              }}
               title="Close"
             >
               ×
@@ -158,15 +203,17 @@ export function ApiProvidersSettings() {
               <label className="auth-form__label">Select Provider</label>
               <select
                 className="auth-form__input-wrapper"
-                style={{ width: '100%', cursor: 'pointer' }}
+                style={{ width: '100%', cursor: editingProviderId ? 'not-allowed' : 'pointer' }}
                 value={selectedTemplateType}
+                disabled={Boolean(editingProviderId)}
                 onChange={(e) => {
                   const tType = e.target.value;
                   setSelectedTemplateType(tType);
                   const t = PROVIDER_TEMPLATES.find((x) => x.type === tType);
                   if (t) {
                     setCustomBaseURL(t.defaultBaseURL);
-                    setCustomName(t.name);
+                    setCustomName(t.type === 'custom' ? '' : t.name);
+                    setCustomModelsInput('');
                   }
                 }}
               >
@@ -192,9 +239,11 @@ export function ApiProvidersSettings() {
               </div>
             </div>
 
-            {activeTemplate.requiresKey && (
+            {(activeTemplate.requiresKey || activeTemplate.isCustom) && (
               <div className="auth-form__group">
-                <label className="auth-form__label">API Key / Token</label>
+                <label className="auth-form__label">
+                  API Key / Token {activeTemplate.isCustom ? '(Optional)' : ''}
+                </label>
                 <div className="auth-form__input-wrapper">
                   <Key size={15} style={{ color: 'var(--text-muted)' }} />
                   <input
@@ -233,12 +282,44 @@ export function ApiProvidersSettings() {
               </div>
             </div>
 
+            {(activeTemplate.isCustom || activeTemplate.type === 'openrouter' || activeTemplate.type === 'groq') && (
+              <div className="auth-form__group">
+                <label className="auth-form__label">
+                  {activeTemplate.isCustom
+                    ? 'Model IDs (comma-separated)'
+                    : 'Custom / Free Model IDs (optional, comma-separated)'}
+                </label>
+                <div className="auth-form__input-wrapper">
+                  <input
+                    type="text"
+                    className="auth-form__input"
+                    value={customModelsInput}
+                    onChange={(e) => setCustomModelsInput(e.target.value)}
+                    placeholder={
+                      activeTemplate.type === 'openrouter'
+                        ? 'e.g. meta-llama/llama-3.3-70b-instruct:free, deepseek/deepseek-r1:free'
+                        : activeTemplate.type === 'groq'
+                          ? 'e.g. llama-3.3-70b-versatile, qwen-qwq-32b'
+                          : 'e.g. llama-3.1-8b, qwen-2.5-coder'
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
-              <Button variant="ghost" size="sm" onClick={() => setIsAdding(false)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsAdding(false);
+                  setEditingProviderId(null);
+                }}
+              >
                 Cancel
               </Button>
               <Button variant="primary" size="sm" type="submit">
-                Connect Provider
+                {editingProviderId ? 'Save Changes' : 'Connect Provider'}
               </Button>
             </div>
           </form>
@@ -311,6 +392,15 @@ export function ApiProvidersSettings() {
                     <button
                       type="button"
                       className="btn-icon"
+                      onClick={() => handleStartEdit(provider)}
+                      title="Edit Provider"
+                      aria-label="Edit Provider"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-icon"
                       onClick={() => handleRemoveProvider(provider.id)}
                       title="Disconnect Provider"
                     >
@@ -336,12 +426,12 @@ export function ApiProvidersSettings() {
         )}
       </div>
 
-      {/* Available / Quick Connect Providers */}
+      {/* Built-in & Custom Providers */}
       <div className="api-providers-settings__section">
-        <h3 className="api-providers-settings__section-heading">Available Provider Integrations</h3>
+        <h3 className="api-providers-settings__section-heading">Built-in &amp; Custom Providers</h3>
         <div className="api-providers-settings__catalog">
           {PROVIDER_TEMPLATES.map((tpl) => {
-            const isAlreadyConnected = providers.some((p) => p.type === tpl.type);
+            const isAlreadyConnected = !tpl.isCustom && providers.some((p) => p.type === tpl.type);
 
             return (
               <div key={tpl.type} className="api-provider-catalog-card">
@@ -351,7 +441,7 @@ export function ApiProvidersSettings() {
                 </div>
                 <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    {tpl.models.length} Models
+                    {tpl.isCustom ? 'Custom Endpoint' : `${tpl.models.length} Models`}
                   </span>
                   {isAlreadyConnected ? (
                     <span style={{ fontSize: '11px', color: 'var(--status-success)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -363,7 +453,7 @@ export function ApiProvidersSettings() {
                       size="sm"
                       onClick={() => handleStartAdd(tpl.type)}
                     >
-                      Connect
+                      {tpl.isCustom ? 'Add Custom' : 'Connect'}
                     </Button>
                   )}
                 </div>

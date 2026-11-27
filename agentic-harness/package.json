@@ -7,7 +7,9 @@
     "start": "node scripts/dev.js",
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
-    "package": "electron-builder"
+    "package": "electron-builder",
+    "test:security": "node scripts/test-security.js",
+    "test:tools": "node scripts/test-tools.js"
   },
   "devDependencies": {
     "electron": "^45.2.0",

@@ -3,9 +3,10 @@
  * Manages files, folders, multi-file editor tabs, saving, and recently modified items.
  */
 
-import { api } from './api';
+import { api } from './api.js';
 
 const FILES_STORAGE_KEY = 'agentic_harness_workspace_files';
+const PROJECT_ROOT_KEY = 'agentic_harness_project_root';
 
 const INITIAL_WORKSPACE_FILES = [
   {
@@ -49,8 +50,36 @@ const INITIAL_WORKSPACE_FILES = [
 class FileService {
   constructor() {
     this.files = this.loadFiles();
+    this.projectRoot = this.loadProjectRoot();
     this.openFileIds = [this.files[0]?.id || 'f-1'];
     this.activeFileId = this.files[0]?.id || 'f-1';
+  }
+
+  loadProjectRoot() {
+    try {
+      if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') return null;
+      const stored = localStorage.getItem(PROJECT_ROOT_KEY);
+      return stored ? JSON.parse(stored) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  getProjectRoot() {
+    return this.projectRoot;
+  }
+
+  setProjectFiles({ projectPath, projectName, files }) {
+    this.projectRoot = { path: projectPath, name: projectName };
+    this.files = Array.isArray(files) ? files : [];
+    const firstFile = this.files[0] || null;
+    this.openFileIds = firstFile ? [firstFile.id] : [];
+    this.activeFileId = firstFile ? firstFile.id : null;
+    try {
+      localStorage.setItem(PROJECT_ROOT_KEY, JSON.stringify(this.projectRoot));
+    } catch (_) {}
+    this.saveFilesToStorage();
+    return { projectRoot: this.projectRoot, files: this.files, activeFile: firstFile };
   }
 
   loadFiles() {

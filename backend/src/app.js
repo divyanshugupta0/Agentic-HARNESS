@@ -4,6 +4,7 @@ const session = require('express-session');
 const helmet = require('helmet');
 const { createAuthRouter } = require('./routes/auth');
 const extensionRoutes = require("./routes/extensionRoutes");
+const apiRoutes = require('./routes/apiRoutes');
 
 function createApp({ config, passport, sessionStore, users, desktopAuth }) {
   if (!config || !passport || !sessionStore || !users || !desktopAuth) {
@@ -17,10 +18,15 @@ function createApp({ config, passport, sessionStore, users, desktopAuth }) {
 
   app.use(helmet());
   app.use(cors({
-    origin: config.frontendUrl,
+    origin: (origin, callback) => {
+      if (!origin || origin === 'null' || origin.startsWith('file://') || origin === config.frontendUrl) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true
   }));
-  app.use(express.json({ limit: '10kb' }));
+  app.use(express.json({ limit: '10mb' }));
   app.use(session({
     name: 'agentic.sid',
     secret: config.sessionSecret,
@@ -40,6 +46,7 @@ function createApp({ config, passport, sessionStore, users, desktopAuth }) {
   app.use(passport.initialize());
   app.use(passport.session());
   app.use('/auth', createAuthRouter(passport, config, users, desktopAuth));
+  app.use('/api', apiRoutes);
   app.use("/api/extensions", extensionRoutes);
 
   app.use((error, _req, res, _next) => {

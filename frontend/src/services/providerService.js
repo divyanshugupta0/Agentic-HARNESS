@@ -6,7 +6,9 @@
 
 import { sanitizeDiagnostics, createDiagnostic, ERROR_CATEGORIES } from '../utils/diagnostics.js';
 
+const API_BASE_URL = (import.meta?.env?.VITE_AUTH_API_URL || 'http://localhost:3002').replace(/\/$/, '');
 const PROVIDERS_STORAGE_KEY = 'agentic_harness_providers';
+const PROVIDER_KEY_PREFIX = 'agentic_harness_provider_key_';
 const ACTIVE_PROVIDER_KEY = 'agentic_harness_active_provider';
 
 export const PROVIDER_TEMPLATES = [
@@ -97,6 +99,16 @@ export const PROVIDER_TEMPLATES = [
     models: [
       { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Groq)', context: '128k', tag: 'Ultra Fast' }
     ]
+  },
+  {
+    type: 'custom',
+    name: 'Custom Provider',
+    description: 'Connect any OpenAI-compatible endpoint (vLLM, LM Studio, LiteLLM, Azure, self-hosted)',
+    requiresKey: false,
+    isCustom: true,
+    keyPlaceholder: 'Optional API key / bearer token',
+    defaultBaseURL: 'http://localhost:8000/v1',
+    models: []
   }
 ];
 
@@ -146,6 +158,89 @@ class ProviderService {
     return this.getConfiguredProviders().find((p) => p.id === id) || null;
   }
 
+  getApiKey(providerId) {
+    if (!providerId) return '';
+    try {
+      if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
+        const isolated = localStorage.getItem(`${PROVIDER_KEY_PREFIX}${providerId}`);
+        if (isolated !== null) return isolated;
+      }
+    } catch (_) {}
+    return this.getProviderById(providerId)?.apiKey || '';
+  }
+
+  setApiKey(providerId, apiKey) {
+    if (!providerId) return;
+    try {
+      if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
+        if (apiKey) {
+          localStorage.setItem(`${PROVIDER_KEY_PREFIX}${providerId}`, apiKey);
+        } else {
+          localStorage.removeItem(`${PROVIDER_KEY_PREFIX}${providerId}`);
+        }
+      }
+    } catch (_) {}
+  }
+
+  setActiveTarget({ providerId, modelId }) {
+    try {
+      if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
+        localStorage.setItem(ACTIVE_PROVIDER_KEY, JSON.stringify({ providerId, modelId }));
+      }
+      this.notify();
+    } catch (_) {}
+  }
+
+  getActiveTarget(fallbackModelId = null) {
+    try {
+      if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
+        const raw = localStorage.getItem(ACTIVE_PROVIDER_KEY);
+        if (raw) {
+          const { providerId, modelId } = JSON.parse(raw);
+          const provider = this.getProviderById(providerId);
+          if (provider && provider.status !== 'error') {
+            const targetModelId = fallbackModelId || modelId;
+            const matchedModel = (provider.models || []).find((m) => m.id === targetModelId);
+            if (matchedModel) {
+              return {
+                provider,
+                apiKey: this.getApiKey(provider.id),
+                model: matchedModel
+              };
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    return this.getProviderForModel(fallbackModelId);
+  }
+
+  getProviderForModel(modelId) {
+    const providers = this.getConfiguredProviders().filter((p) => p.status !== 'error');
+    if (!providers.length) return null;
+
+    if (modelId) {
+      for (const prov of providers) {
+        const matchedModel = (prov.models || []).find((m) => m.id === modelId);
+        if (matchedModel) {
+          return {
+            provider: prov,
+            apiKey: this.getApiKey(prov.id),
+            model: matchedModel
+          };
+        }
+      }
+      return null;
+    }
+
+    const first = providers[0];
+    return {
+      provider: first,
+      apiKey: this.getApiKey(first.id),
+      model: first.models?.[0] || null
+    };
+  }
+
   saveProviders(providers) {
     try {
       if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
@@ -157,27 +252,61 @@ class ProviderService {
     }
   }
 
-  addOrUpdateProvider({ type, name, apiKey = '', baseURL = '' }) {
+  addOrUpdateProvider({ id = null, type, name, apiKey = '', baseURL = '', customModels = '' }) {
     const template = PROVIDER_TEMPLATES.find((t) => t.type === type);
     if (!template) {
       throw new Error(`Unknown provider type: ${type}`);
     }
 
     const providers = this.getConfiguredProviders();
-    const existingIndex = providers.findIndex((p) => p.type === type);
+    const displayName = (name || template.name).trim();
+    const existingIndex = id
+      ? providers.findIndex((p) => p.id === id)
+      : type === 'custom'
+      ? providers.findIndex((p) => p.type === 'custom' && p.name.toLowerCase() === displayName.toLowerCase())
+      : providers.findIndex((p) => p.type === type);
+
+    const parsedCustomIds = String(customModels || '')
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean);
+
+    const customModelEntries = parsedCustomIds.map((modelId) => ({
+      id: modelId,
+      name: modelId,
+      context: 'Custom',
+      tag: modelId.endsWith(':free') ? 'Free' : 'Custom',
+      provider: displayName
+    }));
+
+    let resolvedModels;
+    if (type === 'custom') {
+      resolvedModels = customModelEntries.length
+        ? customModelEntries
+        : [{ id: 'custom-model', name: 'custom-model', context: 'Custom', tag: 'Custom', provider: displayName }];
+    } else {
+      const templateModels = template.models.map((m) => ({
+        ...m,
+        provider: displayName
+      }));
+      const seen = new Set(customModelEntries.map((m) => m.id));
+      resolvedModels = [...customModelEntries, ...templateModels.filter((m) => !seen.has(m.id))];
+    }
+
+    const providerId = existingIndex >= 0 ? providers[existingIndex].id : `prov_${Date.now()}`;
+    const trimmedKey = apiKey.trim();
+    this.setApiKey(providerId, trimmedKey);
 
     const providerEntry = {
-      id: existingIndex >= 0 ? providers[existingIndex].id : `prov_${Date.now()}`,
+      id: providerId,
       type,
-      name: name || template.name,
-      apiKey: apiKey.trim(),
+      name: displayName,
+      apiKey: trimmedKey,
       baseURL: baseURL.trim() || template.defaultBaseURL,
+      customModelIds: parsedCustomIds,
       status: 'connected',
       updatedAt: new Date().toISOString(),
-      models: template.models.map((m) => ({
-        ...m,
-        provider: name || template.name
-      }))
+      models: resolvedModels
     };
 
     if (existingIndex >= 0) {
@@ -191,8 +320,71 @@ class ProviderService {
   }
 
   removeProvider(id) {
+    this.setApiKey(id, '');
     const providers = this.getConfiguredProviders().filter((p) => p.id !== id);
     this.saveProviders(providers);
+  }
+
+  async fetchAndSyncModels(providerId) {
+    const provider = this.getProviderById(providerId);
+    if (!provider) {
+      return { success: false, error: 'Provider not found', models: [] };
+    }
+
+    const apiKey = this.getApiKey(provider.id);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/models`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: {
+            type: provider.type,
+            name: provider.name,
+            baseURL: provider.baseURL,
+            apiKey
+          }
+        })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) {
+        return {
+          success: false,
+          error: payload.error || `HTTP ${response.status}`,
+          models: provider.models || []
+        };
+      }
+
+      const liveModels = Array.isArray(payload.models) ? payload.models : [];
+      if (liveModels.length > 0) {
+        const providers = this.getConfiguredProviders();
+        const idx = providers.findIndex((p) => p.id === provider.id);
+        if (idx >= 0) {
+          const customEntries = (providers[idx].customModelIds || []).map((modelId) => ({
+            id: modelId,
+            name: modelId,
+            context: 'Custom',
+            tag: modelId.endsWith(':free') ? 'Free' : 'Custom',
+            provider: providers[idx].name
+          }));
+          const seen = new Set(customEntries.map((m) => m.id));
+          providers[idx] = {
+            ...providers[idx],
+            models: [...customEntries, ...liveModels.filter((m) => !seen.has(m.id))],
+            updatedAt: new Date().toISOString()
+          };
+          this.saveProviders(providers);
+        }
+      }
+
+      return { success: true, models: liveModels };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.message || 'Network error while fetching models',
+        models: provider.models || []
+      };
+    }
   }
 
   async testConnection(providerId) {
@@ -207,9 +399,9 @@ class ProviderService {
     }
 
     const template = PROVIDER_TEMPLATES.find((t) => t.type === provider.type);
+    const apiKey = this.getApiKey(provider.id);
 
-    // Validate key requirement
-    if (template?.requiresKey && (!provider.apiKey || provider.apiKey.length < 8)) {
+    if (template?.requiresKey && (!apiKey || apiKey.length < 8)) {
       return {
         success: false,
         error: createDiagnostic(new Error('Invalid API key or token format. Credentials must be configured.'), {
@@ -218,37 +410,19 @@ class ProviderService {
       };
     }
 
-    // If local Ollama, try to reach the endpoint
-    if (provider.type === 'ollama') {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        const res = await fetch(`${provider.baseURL}/api/tags`, {
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        if (res.ok) {
-          return { success: true, message: 'Connected to local Ollama daemon successfully.' };
-        }
-        return {
-          success: false,
-          error: createDiagnostic(new Error(`Ollama daemon returned HTTP ${res.status}`), {
-            category: ERROR_CATEGORIES.NETWORK_ERROR
-          })
-        };
-      } catch (err) {
-        return {
-          success: false,
-          error: createDiagnostic(err, { category: ERROR_CATEGORIES.NETWORK_ERROR })
-        };
-      }
+    const syncRes = await this.fetchAndSyncModels(provider.id);
+    if (!syncRes.success) {
+      return {
+        success: false,
+        error: createDiagnostic(new Error(syncRes.error), {
+          category: ERROR_CATEGORIES.NETWORK_ERROR
+        })
+      };
     }
 
-    // Cloud providers: verify configuration presence and valid structure
     return {
       success: true,
-      message: `Verified configuration for ${provider.name}. Available models: ${provider.models.length}.`
+      message: `Verified ${provider.name}. Synced ${syncRes.models.length} live models.`
     };
   }
 

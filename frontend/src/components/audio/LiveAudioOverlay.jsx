@@ -2,51 +2,77 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Mic,
   MicOff,
-  Square,
-  Sparkles,
-  Volume2,
-  AlertCircle,
-  Zap,
+  Hand,
   Settings,
   X,
-  MessageSquare,
-  Radio,
-  Cpu
+  Check,
+  Loader
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useChat } from '../../hooks/useChat';
+import { providerService } from '../../services/providerService';
 import { LiquidOrbVisualizer } from './LiquidOrbVisualizer';
 
+const API_BASE_URL = (import.meta?.env?.VITE_AUTH_API_URL || 'http://localhost:3002').replace(/\/$/, '');
+
+const VOICE_OPTIONS = [
+  { id: 'en-US-AriaNeural', name: 'Aria', desc: 'Warm & expressive' },
+  { id: 'en-US-GuyNeural', name: 'Guy', desc: 'Natural conversational' },
+  { id: 'en-US-JennyNeural', name: 'Jenny', desc: 'Clear & friendly' },
+  { id: 'en-US-ChristopherNeural', name: 'Christopher', desc: 'Deep & composed' }
+];
+
 /**
- * PersonaPlex Full-Duplex Conversational Audio Overlay
- * Natural simultaneous listening and speaking with real-time barge-in,
- * animated liquid ball visualizer reacting to voice pitch, and
- * Kyutai Pocket TTS CPU fallback.
+ * ChatGPT-style Full-Screen Voice-Only Live AI Mode
+ * Uses local Web Audio VAD + MediaRecorder (no Chromium SpeechRecognition network spam)
+ * and routes captured voice directly to the currently selected model.
  */
 export function LiveAudioOverlay({ isOpen, onClose }) {
+  const { selectedModel } = useChat();
   const [isActive, setIsActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [duplexState, setDuplexState] = useState('IDLE'); // IDLE, LISTENING, SPEAKING, INTERRUPTED
-  const [interruptionCount, setInterruptionCount] = useState(0);
-  const [backchannelCue, setBackchannelCue] = useState(null);
+  const [isUserSpeaking, setIsUserSpeaking] = useState(false);
+  const [duplexState, setDuplexState] = useState('IDLE'); // IDLE, LISTENING, THINKING, SPEAKING, INTERRUPTED
   const [voicePersona, setVoicePersona] = useState('en-US-AriaNeural');
   const [sessionDuration, setSessionDuration] = useState(0);
   const [showConfig, setShowConfig] = useState(false);
   const [hardwareInfo, setHardwareInfo] = useState({
     hasNvidiaGpu: false,
     isCpuOnly: true,
-    engineName: 'Kyutai Pocket TTS (CPU-Optimized Neural Voice)'
+    engineName: 'Kyutai Pocket TTS'
   });
-  const [lastSpeechTranscript, setLastSpeechTranscript] = useState(
-    'Kyutai Pocket TTS engine ready. Speak naturally or interrupt anytime.'
-  );
-
+  const [caption, setCaption] = useState('');
+  const [activeTarget, setActiveTarget] = useState(() => providerService.getActiveTarget(selectedModel));
   const [audioInstances, setAudioInstances] = useState({ analyser: null, context: null });
 
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
+  const sourceNodeRef = useRef(null);
   const mediaStreamRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
   const activeAudioElRef = useRef(null);
+  const vadRafRef = useRef(null);
+  const historyRef = useRef([]);
   const timerRef = useRef(null);
+  const duplexStateRef = useRef('IDLE');
+  const isMutedRef = useRef(false);
+  const selectedModelRef = useRef(selectedModel);
+
+  useEffect(() => {
+    duplexStateRef.current = duplexState;
+  }, [duplexState]);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
+
+  useEffect(() => {
+    selectedModelRef.current = selectedModel;
+    setActiveTarget(providerService.getActiveTarget(selectedModel));
+    return providerService.subscribe(() => {
+      setActiveTarget(providerService.getActiveTarget(selectedModel));
+    });
+  }, [selectedModel]);
 
   useEffect(() => {
     if (isOpen) {
@@ -71,7 +97,155 @@ export function LiveAudioOverlay({ isOpen, onClose }) {
     return () => clearInterval(timerRef.current);
   }, [isActive]);
 
+  const blobToBase64 = (blob) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const res = String(reader.result || '');
+        const comma = res.indexOf(',');
+        resolve(comma >= 0 ? res.slice(comma + 1) : res);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+  const startVadLoop = (stream, analyser) => {
+    const buffer = new Float32Array(analyser.fftSize);
+    let isRecording = false;
+    let speechStartAt = 0;
+    let lastVoiceAt = 0;
+    let chunks = [];
+
+    const beginRecording = () => {
+      if (isRecording || !window.MediaRecorder) return;
+      try {
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : 'audio/webm';
+        const recorder = new MediaRecorder(stream, { mimeType });
+        chunks = [];
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) chunks.push(e.data);
+        };
+        recorder.onstop = async () => {
+          setIsUserSpeaking(false);
+          const duration = performance.now() - speechStartAt;
+          if (duration < 350 || chunks.length === 0) return;
+          const blob = new Blob(chunks, { type: mimeType });
+          try {
+            const b64 = await blobToBase64(blob);
+            await sendVoiceToSelectedModel({ mimeType: 'audio/webm', data: b64 });
+          } catch (_) {}
+        };
+        recorder.start(250);
+        mediaRecorderRef.current = recorder;
+        isRecording = true;
+        setIsUserSpeaking(true);
+        speechStartAt = performance.now();
+        lastVoiceAt = speechStartAt;
+      } catch (_) {}
+    };
+
+    const finishRecording = () => {
+      if (!isRecording) return;
+      isRecording = false;
+      setIsUserSpeaking(false);
+      const rec = mediaRecorderRef.current;
+      mediaRecorderRef.current = null;
+      if (rec && rec.state !== 'inactive') {
+        try {
+          rec.stop();
+        } catch (_) {}
+      }
+    };
+
+    const tick = () => {
+      if (!mediaStreamRef.current) return;
+
+      if (audioContextRef.current?.state === 'suspended') {
+        audioContextRef.current.resume().catch(() => {});
+      }
+
+      if (isMutedRef.current || duplexStateRef.current === 'THINKING') {
+        if (isRecording) finishRecording();
+        vadRafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
+      analyser.getFloat32TimeDomainData(buffer);
+      let sum = 0;
+      for (let i = 0; i < buffer.length; i++) sum += buffer[i] * buffer[i];
+      const rms = Math.sqrt(sum / buffer.length);
+      const now = performance.now();
+
+      if (rms > 0.012) {
+        if (duplexStateRef.current === 'SPEAKING') {
+          handleBargeIn();
+        }
+        if (!isRecording && duplexStateRef.current === 'LISTENING') {
+          beginRecording();
+        }
+        lastVoiceAt = now;
+      } else if (isRecording && now - lastVoiceAt > 1100) {
+        finishRecording();
+      }
+
+      vadRafRef.current = requestAnimationFrame(tick);
+    };
+
+    vadRafRef.current = requestAnimationFrame(tick);
+  };
+
+  const initWebAudio = async () => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCaption('Microphone API is unavailable in this environment.');
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+      if (!stream.getAudioTracks().length) {
+        setCaption('No microphone input device detected.');
+        return;
+      }
+      mediaStreamRef.current = stream;
+
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.8;
+
+      const source = ctx.createMediaStreamSource(stream);
+      // Connect through a zero-gain node so Chromium continuously pulls mic frames into AnalyserNode without echo
+      const silentGain = ctx.createGain();
+      silentGain.gain.value = 0;
+      source.connect(analyser);
+      analyser.connect(silentGain);
+      silentGain.connect(ctx.destination);
+
+      sourceNodeRef.current = source;
+      audioContextRef.current = ctx;
+      analyserRef.current = analyser;
+      setAudioInstances({ analyser, context: ctx });
+      startVadLoop(stream, analyser);
+    } catch (err) {
+      console.warn('Microphone access unavailable:', err);
+      setCaption(`Microphone unavailable: ${err.message || 'Permission denied'}`);
+    }
+  };
+
   const startSession = async () => {
+    setCaption('');
+    historyRef.current = [];
     try {
       const res = await api.send('liveAudio:start', {
         mode: 'live-audio-full-duplex',
@@ -79,25 +253,32 @@ export function LiveAudioOverlay({ isOpen, onClose }) {
         enableBackchanneling: true,
         persona: voicePersona
       });
-
-      if (res && res.hardware) {
+      if (res?.hardware) {
         setHardwareInfo(res.hardware);
       }
+    } catch (_) {}
 
-      if (res && res.success !== false) {
-        setIsActive(true);
-        setDuplexState('LISTENING');
-        initWebAudio();
-      }
-    } catch (err) {
-      console.warn('Live audio start notice:', err);
-      setIsActive(true);
-      setDuplexState('LISTENING');
-    }
+    setIsActive(true);
+    setDuplexState('LISTENING');
+    initWebAudio();
   };
 
   const stopSession = async () => {
+    if (vadRafRef.current) {
+      cancelAnimationFrame(vadRafRef.current);
+      vadRafRef.current = null;
+    }
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.onstop = null;
+        mediaRecorderRef.current.stop();
+      } catch (_) {}
+      mediaRecorderRef.current = null;
+    }
+
     try {
+      window.speechSynthesis?.cancel();
       await api.send('liveAudio:stop');
     } catch (_) {}
 
@@ -109,10 +290,18 @@ export function LiveAudioOverlay({ isOpen, onClose }) {
       activeAudioElRef.current = null;
     }
 
+    if (sourceNodeRef.current) {
+      try {
+        sourceNodeRef.current.disconnect();
+      } catch (_) {}
+      sourceNodeRef.current = null;
+    }
+
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
     }
+
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
       audioContextRef.current.close().catch(() => {});
       audioContextRef.current = null;
@@ -121,9 +310,24 @@ export function LiveAudioOverlay({ isOpen, onClose }) {
     setAudioInstances({ analyser: null, context: null });
     setIsActive(false);
     setDuplexState('IDLE');
+    setShowConfig(false);
   };
 
-  const playNeuralSpeechBuffer = async (b64) => {
+  const speakWithBrowserFallback = (text) => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.onend = () => setDuplexState('LISTENING');
+        utterance.onerror = () => setDuplexState('LISTENING');
+        window.speechSynthesis.speak(utterance);
+        return;
+      } catch (_) {}
+    }
+    setTimeout(() => setDuplexState('LISTENING'), 3000);
+  };
+
+  const playNeuralSpeechBuffer = async (b64, fallbackText) => {
     try {
       if (activeAudioElRef.current) {
         try {
@@ -133,8 +337,7 @@ export function LiveAudioOverlay({ isOpen, onClose }) {
         activeAudioElRef.current = null;
       }
 
-      const audioUri = `data:audio/mp3;base64,${b64}`;
-      const audio = new Audio(audioUri);
+      const audio = new Audio(`data:audio/mp3;base64,${b64}`);
       audio.volume = 1.0;
       activeAudioElRef.current = audio;
 
@@ -143,34 +346,20 @@ export function LiveAudioOverlay({ isOpen, onClose }) {
         setDuplexState('LISTENING');
       };
 
-      audio.onerror = (e) => {
-        console.error('Audio playback error:', e);
+      audio.onerror = () => {
         activeAudioElRef.current = null;
-        setDuplexState('LISTENING');
+        speakWithBrowserFallback(fallbackText);
       };
 
       await audio.play();
-    } catch (err) {
-      console.warn('Audio playback error, attempting user gesture retry:', err);
-      try {
-        const audioUri = `data:audio/mp3;base64,${b64}`;
-        const audio = new Audio(audioUri);
-        activeAudioElRef.current = audio;
-        audio.play().catch(() => {});
-      } catch (_) {}
-      setTimeout(() => setDuplexState('LISTENING'), 3500);
+    } catch (_) {
+      speakWithBrowserFallback(fallbackText);
     }
-  };
-
-  const triggerBackchannel = () => {
-    const cues = ['mm-hmm', 'I hear you', 'got it', 'go on'];
-    const chosen = cues[Math.floor(Math.random() * cues.length)];
-    setBackchannelCue(chosen);
-    setTimeout(() => setBackchannelCue(null), 1800);
   };
 
   const handleBargeIn = async () => {
     try {
+      window.speechSynthesis?.cancel();
       if (activeAudioElRef.current) {
         try {
           activeAudioElRef.current.pause();
@@ -179,48 +368,98 @@ export function LiveAudioOverlay({ isOpen, onClose }) {
         activeAudioElRef.current = null;
       }
 
-      await api.send('liveAudio:interrupt');
+      await api.send('liveAudio:interrupt').catch(() => {});
       setDuplexState('INTERRUPTED');
-      setInterruptionCount((prev) => prev + 1);
-      setLastSpeechTranscript('⚠️ Barge-in triggered! AI speech immediately halted for user voice priority.');
+      setCaption('Interrupted');
       setTimeout(() => {
         setDuplexState('LISTENING');
-      }, 1200);
+        setCaption('');
+      }, 700);
     } catch (err) {
       console.error('Barge in failed:', err);
     }
   };
 
-  const handleSimulateAiSpeech = async () => {
-    setDuplexState('SPEAKING');
-    const engineLabel = hardwareInfo.isCpuOnly ? 'Kyutai Pocket TTS (CPU)' : 'PersonaPlex (GPU)';
-    setLastSpeechTranscript(`[${engineLabel}] "Synthesizing conversational response in real-time on CPU with Kyutai streaming pipeline..."`);
+  const sendVoiceToSelectedModel = async (audioPayload) => {
+    const target = providerService.getActiveTarget(selectedModelRef.current);
+    if (!target || !target.provider || !target.model) {
+      setCaption('No model configured. Add a provider in Settings first.');
+      setDuplexState('LISTENING');
+      return;
+    }
+
+    setDuplexState('THINKING');
+    setCaption('');
+
+    const nextMessages = [
+      ...historyRef.current,
+      { role: 'user', content: 'Respond naturally to the user audio.' }
+    ];
 
     try {
-      const res = await api.send('liveAudio:speak', {
-        text: 'Hello! I am speaking with Kyutai Pocket natural neural speech running on CPU. My voice sounds fluid and natural.',
-        options: { voice: voicePersona }
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: {
+            type: target.provider.type,
+            baseURL: target.provider.baseURL,
+            apiKey: target.apiKey
+          },
+          model: target.model.id,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are in live voice conversation mode. Keep replies natural, helpful, and concise.'
+            },
+            ...nextMessages
+          ],
+          audio: audioPayload
+        })
       });
 
-      if (res?.audioBase64) {
-        setLastSpeechTranscript(`PersonaPlex (${res.voice || 'Aria Neural'}): "Hello! I am speaking with Kyutai Pocket natural neural speech running on CPU."`);
-        await playNeuralSpeechBuffer(res.audioBase64);
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || `HTTP ${response.status}`);
+      }
+
+      const reply = (result.content || '').trim() || 'I did not catch that.';
+      historyRef.current = [...nextMessages, { role: 'assistant', content: reply }].slice(-12);
+
+      setDuplexState('SPEAKING');
+      setCaption(reply);
+
+      const ttsRes = await api.send('liveAudio:speak', {
+        text: reply,
+        options: { voice: voicePersona }
+      }).catch(() => null);
+
+      if (ttsRes?.audioBase64) {
+        await playNeuralSpeechBuffer(ttsRes.audioBase64, reply);
       } else {
-        setTimeout(() => setDuplexState('LISTENING'), 3500);
+        speakWithBrowserFallback(reply);
       }
     } catch (err) {
-      console.error('Speak error:', err);
-      setTimeout(() => setDuplexState('LISTENING'), 3500);
+      setCaption(`Error (${target.model.name}): ${err.message}`);
+      setDuplexState('LISTENING');
     }
   };
 
   const toggleMute = () => {
+    const nextMuted = !isMuted;
+    if (sourceNodeRef.current) {
+      try {
+        sourceNodeRef.current.disconnect();
+      } catch (_) {}
+      sourceNodeRef.current = null;
+    }
+
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getAudioTracks().forEach((track) => {
-        track.enabled = isMuted;
+        track.enabled = !nextMuted;
       });
     }
-    setIsMuted(!isMuted);
+    setIsMuted(nextMuted);
   };
 
   const formatTime = (secs) => {
@@ -229,6 +468,18 @@ export function LiveAudioOverlay({ isOpen, onClose }) {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  const getStatusLabel = () => {
+    if (duplexState === 'THINKING') return 'Thinking...';
+    if (duplexState === 'SPEAKING') return 'Speaking';
+    if (duplexState === 'INTERRUPTED') return 'Interrupted';
+    if (isMuted) return 'Microphone muted';
+    if (isUserSpeaking) return 'Hearing you...';
+    return 'Listening';
+  };
+
+  const selectedVoice = VOICE_OPTIONS.find((v) => v.id === voicePersona) || VOICE_OPTIONS[0];
+  const modelLabel = activeTarget?.model?.name || 'No Model Selected';
+
   if (!isOpen) return null;
 
   return (
@@ -236,366 +487,370 @@ export function LiveAudioOverlay({ isOpen, onClose }) {
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(10, 13, 20, 0.88)',
-        backdropFilter: 'blur(10px)',
         zIndex: 9999,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px'
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        background: 'radial-gradient(circle at 50% 42%, #0f172a 0%, #07090f 65%, #040508 100%)',
+        color: '#f8fafc',
+        fontFamily: 'inherit',
+        userSelect: 'none'
       }}
     >
-      <div
+      {/* Top Bar */}
+      <header
         style={{
-          width: '100%',
-          maxWidth: '580px',
-          backgroundColor: 'var(--bg-secondary)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 'var(--radius-xl, 18px)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(56, 189, 248, 0.2)',
-          overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column'
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '20px 28px',
+          position: 'relative',
+          zIndex: 2
         }}
       >
-        {/* Top Header Bar */}
         <div
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '16px 20px',
-            borderBottom: '1px solid var(--border-subtle)',
-            backgroundColor: 'var(--bg-tertiary)'
+            gap: '10px',
+            padding: '7px 14px',
+            borderRadius: '9999px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            backdropFilter: 'blur(12px)',
+            fontSize: '13px',
+            color: 'rgba(248, 250, 252, 0.85)'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                backgroundColor: duplexState === 'SPEAKING' ? 'var(--accent-purple)' : 'var(--accent-emerald)',
-                boxShadow: `0 0 10px ${duplexState === 'SPEAKING' ? 'var(--accent-purple)' : 'var(--accent-emerald)'}`,
-                animation: 'pulse 1.5s infinite'
-              }}
-            />
-            <div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>Live Audio Mode</span>
-                <span
-                  style={{
-                    fontSize: '10px',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                    color: 'var(--accent-cyan)',
-                    fontWeight: 600
-                  }}
-                >
-                  FULL DUPLEX
-                </span>
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                Gemini & ChatGPT-style animated liquid orb reacting to voice pitch
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              type="button"
-              className="btn-icon"
-              onClick={() => setShowConfig(!showConfig)}
-              title="Configure Voice Persona"
-              style={{ color: showConfig ? 'var(--accent-cyan)' : 'var(--text-muted)' }}
-            >
-              <Settings size={16} />
-            </button>
-            <button
-              type="button"
-              className="btn-icon"
-              onClick={onClose}
-              title="Close Live Audio"
-            >
-              <X size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/* Persona Config Panel (Collapsible) */}
-        {showConfig && (
-          <div
+          <span
             style={{
-              padding: '14px 20px',
-              backgroundColor: 'var(--bg-elevated)',
-              borderBottom: '1px solid var(--border-subtle)',
-              fontSize: '12px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px'
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              backgroundColor: !activeTarget?.model
+                ? '#f59e0b'
+                : isMuted
+                ? '#64748b'
+                : duplexState === 'SPEAKING'
+                ? '#818cf8'
+                : '#38bdf8',
+              boxShadow: isMuted
+                ? 'none'
+                : `0 0 8px ${duplexState === 'SPEAKING' ? '#818cf8' : '#38bdf8'}`
             }}
-          >
-            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Hardware & Voice Configuration</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div>
-                <label style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Voice Engine</label>
-                <div
-                  style={{
-                    padding: '6px 8px',
-                    borderRadius: '6px',
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--accent-emerald)',
-                    marginTop: '4px',
-                    fontWeight: 600,
-                    fontSize: '11px'
-                  }}
-                >
-                  Kyutai Pocket TTS (CPU SIMD)
-                </div>
-              </div>
-              <div>
-                <label style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Neural Voice Model</label>
-                <select
-                  value={voicePersona}
-                  onChange={(e) => setVoicePersona(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '6px 8px',
-                    borderRadius: '6px',
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--accent-cyan)',
-                    fontWeight: 600,
-                    marginTop: '4px'
-                  }}
-                >
-                  <option value="en-US-AriaNeural">Aria (Expressive ChatGPT/Gemini)</option>
-                  <option value="en-US-GuyNeural">Guy (Natural Conversational Male)</option>
-                  <option value="en-US-JennyNeural">Jenny (Warm Pair Programmer)</option>
-                  <option value="en-US-ChristopherNeural">Christopher (Deep Technical Lead)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Central Fluid Liquid Orb Area */}
-        <div
-          style={{
-            padding: '24px 20px 16px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '16px'
-          }}
-        >
-          {/* Animated Liquid Ball Reacting to Voice Pitch */}
-          <LiquidOrbVisualizer
-            analyserNode={audioInstances.analyser}
-            audioContext={audioInstances.context}
-            duplexState={duplexState}
-            isMuted={isMuted}
-            engineType={hardwareInfo.isCpuOnly ? 'kyutai-pocket-tts' : 'nvidia-personaplex'}
-            size={260}
           />
-
-          {/* Live State Badge */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '5px 14px',
-                borderRadius: '9999px',
-                fontSize: '12px',
-                fontWeight: 600,
-                backgroundColor:
-                  duplexState === 'SPEAKING'
-                    ? 'rgba(168, 85, 247, 0.15)'
-                    : duplexState === 'INTERRUPTED'
-                    ? 'rgba(244, 63, 94, 0.2)'
-                    : 'rgba(16, 185, 129, 0.15)',
-                color:
-                  duplexState === 'SPEAKING'
-                    ? 'var(--accent-purple)'
-                    : duplexState === 'INTERRUPTED'
-                    ? 'var(--accent-rose)'
-                    : 'var(--accent-emerald)',
-                border: `1px solid ${
-                  duplexState === 'SPEAKING'
-                    ? 'var(--accent-purple)'
-                    : duplexState === 'INTERRUPTED'
-                    ? 'var(--accent-rose)'
-                    : 'var(--accent-emerald)'
-                }44`
-              }}
-            >
-              {duplexState === 'SPEAKING' && <Volume2 size={13} />}
-              {duplexState === 'LISTENING' && <Radio size={13} />}
-              {duplexState === 'INTERRUPTED' && <AlertCircle size={13} />}
-              <span>
-                {duplexState === 'SPEAKING' && 'AI Speaking (Full-Duplex)'}
-                {duplexState === 'LISTENING' && 'Listening... (Speak anytime)'}
-                {duplexState === 'INTERRUPTED' && 'Barge-In: AI Interrupted!'}
-              </span>
-            </div>
-
-            {/* Backchannel Toast Cue */}
-            {backchannelCue && (
-              <div
-                style={{
-                  fontSize: '11px',
-                  color: 'var(--accent-cyan)',
-                  backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  fontStyle: 'italic'
-                }}
-              >
-                Backchannel cue: "{backchannelCue}"
-              </div>
-            )}
-          </div>
-
-          {/* Transcript / Perception Feed */}
-          <div
-            style={{
-              width: '100%',
-              backgroundColor: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md, 8px)',
-              padding: '10px 14px',
-              fontSize: '12px',
-              color: 'var(--text-secondary)',
-              textAlign: 'center',
-              lineHeight: '1.4'
-            }}
-          >
-            {lastSpeechTranscript}
-          </div>
+          <span style={{ fontWeight: 500 }}>{modelLabel}</span>
+          <span style={{ color: 'rgba(255, 255, 255, 0.25)' }}>•</span>
+          <span style={{ color: 'rgba(248, 250, 252, 0.6)' }}>{selectedVoice.name}</span>
+          <span style={{ color: 'rgba(255, 255, 255, 0.25)' }}>•</span>
+          <span style={{ fontVariantNumeric: 'tabular-nums', color: 'rgba(248, 250, 252, 0.55)' }}>
+            {formatTime(sessionDuration)}
+          </span>
         </div>
 
-        {/* Telemetry Metrics & Engine Details */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-around',
-            padding: '10px 16px',
-            backgroundColor: 'var(--bg-elevated)',
-            borderTop: '1px solid var(--border-subtle)',
-            fontSize: '11px',
-            color: 'var(--text-muted)'
-          }}
-        >
-          <div>Engine: <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>Kyutai Pocket TTS</span></div>
-          <div>Hardware: <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>CPU SIMD</span></div>
-          <div>Barge-In Interrupts: <span style={{ color: 'var(--accent-rose)', fontWeight: 600 }}>{interruptionCount}</span></div>
-          <div>Time: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatTime(sessionDuration)}</span></div>
-        </div>
-
-        {/* Bottom Control Actions */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '14px 20px',
-            backgroundColor: 'var(--bg-secondary)',
-            borderTop: '1px solid var(--border-subtle)'
-          }}
-        >
-          {/* Mute Toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
           <button
             type="button"
-            className="btn-icon"
-            onClick={toggleMute}
-            title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+            onClick={() => setShowConfig((prev) => !prev)}
+            title="Voice settings"
+            aria-label="Voice settings"
             style={{
               width: '40px',
               height: '40px',
               borderRadius: '50%',
-              backgroundColor: isMuted ? 'rgba(244, 63, 94, 0.2)' : 'var(--bg-tertiary)',
-              color: isMuted ? 'var(--accent-rose)' : 'var(--text-primary)'
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              backgroundColor: showConfig ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.05)',
+              color: '#e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer'
             }}
           >
-            {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
+            <Settings size={18} />
           </button>
 
-          {/* Action Center: Test AI Speech & Barge-in */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button
-              type="button"
-              onClick={handleSimulateAiSpeech}
-              disabled={duplexState === 'SPEAKING'}
-              style={{
-                padding: '8px 14px',
-                borderRadius: '8px',
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-default)',
-                color: 'var(--text-primary)',
-                fontSize: '12px',
-                fontWeight: 500,
-                cursor: duplexState === 'SPEAKING' ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <Volume2 size={14} color="var(--accent-purple)" />
-              <span>Simulate Kyutai Speech</span>
-            </button>
-
-            {/* Direct Interrupt / Barge-In Button */}
-            <button
-              type="button"
-              onClick={handleBargeIn}
-              style={{
-                padding: '8px 14px',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(244, 63, 94, 0.15)',
-                border: '1px solid var(--accent-rose)',
-                color: 'var(--accent-rose)',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <Zap size={14} />
-              <span>Barge In (Interrupt)</span>
-            </button>
-          </div>
-
-          {/* End Call / Stop */}
           <button
             type="button"
             onClick={onClose}
-            title="End Live Audio Session"
+            title="Close voice mode"
+            aria-label="Close voice mode"
             style={{
               width: '40px',
               height: '40px',
               borderRadius: '50%',
-              backgroundColor: 'rgba(244, 63, 94, 0.2)',
-              border: '1px solid var(--accent-rose)',
-              color: 'var(--accent-rose)',
-              cursor: 'pointer',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              color: '#e2e8f0',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              cursor: 'pointer'
             }}
           >
-            <Square size={16} fill="var(--accent-rose)" />
+            <X size={18} />
           </button>
+
+          {showConfig && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '50px',
+                right: 0,
+                width: '270px',
+                padding: '14px',
+                borderRadius: '16px',
+                backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                backdropFilter: 'blur(20px)',
+                boxShadow: '0 20px 45px rgba(0, 0, 0, 0.6)',
+                zIndex: 10
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: 'rgba(248, 250, 252, 0.7)',
+                  marginBottom: '10px'
+                }}
+              >
+                Voice
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {VOICE_OPTIONS.map((voice) => {
+                  const selected = voice.id === voicePersona;
+                  return (
+                    <button
+                      key={voice.id}
+                      type="button"
+                      onClick={() => {
+                        setVoicePersona(voice.id);
+                        setShowConfig(false);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '9px 11px',
+                        borderRadius: '10px',
+                        border: selected
+                          ? '1px solid rgba(56, 189, 248, 0.45)'
+                          : '1px solid transparent',
+                        backgroundColor: selected
+                          ? 'rgba(56, 189, 248, 0.12)'
+                          : 'rgba(255, 255, 255, 0.03)',
+                        color: '#f8fafc',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 500 }}>{voice.name}</div>
+                        <div style={{ fontSize: '11px', color: 'rgba(248, 250, 252, 0.5)' }}>
+                          {voice.desc}
+                        </div>
+                      </div>
+                      {selected && <Check size={15} color="#38bdf8" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div
+                style={{
+                  marginTop: '12px',
+                  paddingTop: '10px',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '11px',
+                  color: 'rgba(248, 250, 252, 0.55)'
+                }}
+              >
+                <span>TTS Engine</span>
+                <span style={{ color: '#94a3b8', fontWeight: 500 }}>
+                  {hardwareInfo.isCpuOnly ? 'Kyutai Pocket TTS' : 'PersonaPlex'}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      </header>
+
+      {/* Center Orb & Voice Status */}
+      <main
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0 24px',
+          gap: '24px'
+        }}
+      >
+        <div
+          onClick={duplexState === 'SPEAKING' ? handleBargeIn : undefined}
+          title={duplexState === 'SPEAKING' ? 'Tap to interrupt' : undefined}
+          style={{ cursor: duplexState === 'SPEAKING' ? 'pointer' : 'default' }}
+        >
+          <LiquidOrbVisualizer
+            analyserNode={audioInstances.analyser}
+            audioContext={audioInstances.context}
+            duplexState={duplexState === 'THINKING' ? 'SPEAKING' : duplexState}
+            isMuted={isMuted}
+            size={300}
+          />
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            minHeight: '60px',
+            maxWidth: '560px',
+            textAlign: 'center'
+          }}
+        >
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '16px',
+              fontWeight: 500,
+              letterSpacing: '-0.01em',
+              color:
+                duplexState === 'INTERRUPTED'
+                  ? '#fda4af'
+                  : isMuted
+                  ? 'rgba(248, 250, 252, 0.5)'
+                  : 'rgba(248, 250, 252, 0.9)'
+            }}
+          >
+            {duplexState === 'THINKING' && <Loader size={15} className="spin" />}
+            <span>{getStatusLabel()}</span>
+          </div>
+
+          {caption ? (
+            <p
+              style={{
+                margin: 0,
+                fontSize: '14px',
+                lineHeight: 1.55,
+                maxHeight: '110px',
+                overflowY: 'auto',
+                color: 'rgba(248, 250, 252, 0.62)'
+              }}
+            >
+              {caption}
+            </p>
+          ) : (
+            <p style={{ margin: 0, fontSize: '13px', color: 'rgba(248, 250, 252, 0.35)' }}>
+              {activeTarget?.model
+                ? 'Speak naturally anytime'
+                : 'Select or configure a model in Settings to use Voice Mode'}
+            </p>
+          )}
+        </div>
+      </main>
+
+      {/* Bottom Voice-Only Circular Dock */}
+      <footer
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '22px',
+          padding: '24px 28px 38px'
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={toggleMute}
+            title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+            aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+            style={{
+              width: '58px',
+              height: '58px',
+              borderRadius: '50%',
+              border: isMuted
+                ? '1px solid rgba(244, 63, 94, 0.45)'
+                : '1px solid rgba(255, 255, 255, 0.12)',
+              backgroundColor: isMuted ? 'rgba(244, 63, 94, 0.18)' : 'rgba(255, 255, 255, 0.08)',
+              color: isMuted ? '#fda4af' : '#f8fafc',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              backdropFilter: 'blur(12px)'
+            }}
+          >
+            {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
+          </button>
+          <span style={{ fontSize: '12px', color: 'rgba(248, 250, 252, 0.5)' }}>
+            {isMuted ? 'Unmute' : 'Mute'}
+          </span>
+        </div>
+
+        {duplexState === 'SPEAKING' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={handleBargeIn}
+              title="Interrupt AI"
+              aria-label="Interrupt AI"
+              style={{
+                width: '58px',
+                height: '58px',
+                borderRadius: '50%',
+                border: '1px solid rgba(251, 146, 60, 0.45)',
+                backgroundColor: 'rgba(251, 146, 60, 0.18)',
+                color: '#fdba74',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                backdropFilter: 'blur(12px)'
+              }}
+            >
+              <Hand size={22} />
+            </button>
+            <span style={{ fontSize: '12px', color: 'rgba(248, 250, 252, 0.5)' }}>Interrupt</span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            title="End voice mode"
+            aria-label="End voice mode"
+            style={{
+              width: '58px',
+              height: '58px',
+              borderRadius: '50%',
+              border: 'none',
+              backgroundColor: '#ef4444',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 8px 24px rgba(239, 68, 68, 0.35)'
+            }}
+          >
+            <X size={24} />
+          </button>
+          <span style={{ fontSize: '12px', color: 'rgba(248, 250, 252, 0.5)' }}>End</span>
+        </div>
+      </footer>
     </div>
   );
 }
-

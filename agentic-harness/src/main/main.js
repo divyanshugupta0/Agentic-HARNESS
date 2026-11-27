@@ -1,12 +1,16 @@
 // Electron main process entry point
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { registerHandlers } = require('./ipcHandlers');
+const { showPipWindow, hidePipWindow, isAgentRunning } = require('./pipWindow');
 
 let mainWindow;
 
 function createWindow() {
+  // Completely remove the default application menu bar (File, Edit, View, Window, Help)
+  Menu.setApplicationMenu(null);
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 840,
@@ -14,12 +18,29 @@ function createWindow() {
     minHeight: 650,
     backgroundColor: '#0a0d14',
     title: 'Agentic Harness',
+    autoHideMenuBar: true, // Hide menu bar
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       enableRemoteModule: false
     }
+  });
+
+  // Explicitly remove menu from the window instance
+  mainWindow.removeMenu();
+  mainWindow.setMenuBarVisibility(false);
+
+  // Automatically grant microphone media permission for live audio mode
+  session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
+    return permission === 'media' || permission === 'audioCapture' || permission === 'microphone';
+  });
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    if (permission === 'media' || permission === 'audioCapture' || permission === 'microphone') {
+      callback(true);
+      return;
+    }
+    callback(false);
   });
 
   // Resolve frontend build path: check dev server, workspace frontend/dist, packaged dist, or fallback
@@ -37,6 +58,22 @@ function createWindow() {
   } else {
     mainWindow.loadFile(fallbackRenderer);
   }
+
+  mainWindow.on('minimize', () => {
+    if (isAgentRunning()) showPipWindow();
+  });
+  mainWindow.on('blur', () => {
+    if (isAgentRunning()) showPipWindow();
+  });
+  mainWindow.on('focus', () => {
+    hidePipWindow();
+  });
+  mainWindow.on('restore', () => {
+    hidePipWindow();
+  });
+  mainWindow.on('closed', () => {
+    hidePipWindow();
+  });
 }
 
 app.whenReady().then(() => {
