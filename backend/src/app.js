@@ -3,6 +3,7 @@ const express = require('express');
 const session = require('express-session');
 const helmet = require('helmet');
 const { createAuthRouter } = require('./routes/auth');
+const extensionRoutes = require("./routes/extensionRoutes");
 
 function createApp({ config, passport, sessionStore, users, desktopAuth }) {
   if (!config || !passport || !sessionStore || !users || !desktopAuth) {
@@ -39,6 +40,7 @@ function createApp({ config, passport, sessionStore, users, desktopAuth }) {
   app.use(passport.initialize());
   app.use(passport.session());
   app.use('/auth', createAuthRouter(passport, config, users, desktopAuth));
+  app.use("/api/extensions", extensionRoutes);
 
   app.use((error, _req, res, _next) => {
     console.error('Authentication request failed:', error);

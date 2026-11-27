@@ -1,5 +1,5 @@
 // Electron main process entry point
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { registerHandlers } = require('./ipcHandlers');
@@ -40,6 +40,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
   registerHandlers();
   createWindow();
 });
